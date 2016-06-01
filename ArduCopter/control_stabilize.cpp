@@ -50,7 +50,12 @@ void Copter::stabilize_run()
     pilot_throttle_scaled = get_pilot_desired_throttle(channel_throttle->get_control_in());
 
     // call attitude controller
-    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+    //attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+
+	// INKO_TILT: here we have to feed pilot rc control 0 because we will then apply rc control to the servo directly. 
+	// INKO_TILT: in tilt mode, motor speeds are not effected by pilot pitch input. 
+	//cliSerial->printf("target_pitch: %f\n", target_pitch); 
+    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, 0, target_yaw_rate, get_smoothing_gain());
 
     // body-frame rate controller is run directly from 100hz loop
 

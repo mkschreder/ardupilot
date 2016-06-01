@@ -125,6 +125,12 @@ void AP_MotorsMatrix::output_to_motors()
             rc_write(i, motor_out[i]);
         }
     }
+
+	// INKO_TILT: here we directly feed servo with pilot pitch control 
+	// TODO: make configurable using a parameter
+	// default servo output is the last motor output
+	rc_write(AP_MOTORS_MAX_NUM_MOTORS - 1, 1500 + 100 * _pitch_radio_passthrough); 
+
     hal.rcout->push();
 }
 
