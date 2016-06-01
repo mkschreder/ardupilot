@@ -55,6 +55,21 @@ void Copter::stabilize_run()
 	// INKO_TILT: here we have to feed pilot rc control 0 because we will then apply rc control to the servo directly. 
 	// INKO_TILT: in tilt mode, motor speeds are not effected by pilot pitch input. 
 	//cliSerial->printf("target_pitch: %f\n", target_pitch); 
+
+	// compensate yaw and roll
+	//cliSerial->printf("target_yaw: %f, target_pitch: %f, target_roll: %f, ", target_yaw_rate, target_pitch, target_roll); 
+	float cosAngle = cos(radians(target_pitch * 0.01)); 
+
+	float rollComp = target_roll * cosAngle;
+	float rollCompInv = target_roll - rollComp;
+	float yawComp = target_yaw_rate * cosAngle;
+	float yawCompInv = target_yaw_rate - yawComp;
+
+	target_roll = yawCompInv + rollComp;
+	target_yaw_rate = yawComp + rollCompInv; 
+	
+	//cliSerial->printf("new_yaw: %f, new_pitch: %f, new_roll: %f\n", target_yaw_rate, target_pitch, target_roll); 
+
     attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, 0, target_yaw_rate, get_smoothing_gain());
 
     // body-frame rate controller is run directly from 100hz loop
