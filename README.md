@@ -1,3 +1,19 @@
+#ArduPilot TILT Mod#
+
+This is an experimental version of ardupilot to get it working on tilt drones. 
+
+How to build and install: 
+
+	BUILD: 
+
+	cd ArduCopter
+	make px4-v2-quad
+
+	FLASH: 
+	make px4-v2-quad-upload
+
+Tilt servo signal is on last motor output.  
+
 #ArduPilot Project#
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ArduPilot/ardupilot?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
