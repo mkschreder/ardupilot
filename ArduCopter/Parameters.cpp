@@ -894,7 +894,7 @@ const AP_Param::Info Copter::var_info[] = {
     // @Group: RSSI_
     // @Path: ../libraries/AP_RSSI/AP_RSSI.cpp
     GOBJECT(rssi, "RSSI_",  AP_RSSI),      
-    
+
 #if RANGEFINDER_ENABLED == ENABLED
     // @Group: RNGFND
     // @Path: ../libraries/AP_RangeFinder/RangeFinder.cpp
@@ -966,6 +966,12 @@ const AP_Param::Info Copter::var_info[] = {
     // @Values: 0:Do Not Use in RTL and Land 1:Use in RTL and Land
     // @User: Standard
     GSCALAR(terrain_follow, "TERRAIN_FOLLOW", 0),
+
+#if FRAME_CONFIG == QUAD_PTILT_FRAME 
+	// @Group: TILT_
+	// @Path: ../libraries/AP_Motors/AP_MotorsQuadTilt.cpp
+	//GOBJECT(motors, "TILT_", AP_MotorsQuadTilt),
+#endif
 
     AP_VAREND
 };
