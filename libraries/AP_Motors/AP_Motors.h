@@ -6,6 +6,7 @@
 #include "AP_MotorsMatrix.h"
 #include "AP_MotorsTri.h"
 #include "AP_MotorsQuad.h"
+#include "AP_MotorsQuadTilt.h"
 #include "AP_MotorsHexa.h"
 #include "AP_MotorsY6.h"
 #include "AP_MotorsOcta.h"
@@ -13,3 +14,4 @@
 #include "AP_MotorsHeli_Single.h"
 #include "AP_MotorsSingle.h"
 #include "AP_MotorsCoax.h"
+

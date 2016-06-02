@@ -85,6 +85,8 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
     uint8_t mav_type;
 #if (FRAME_CONFIG == QUAD_FRAME)
     mav_type = MAV_TYPE_QUADROTOR;
+#elif (FRAME_CONFIG == QUAD_PTILT_FRAME)
+	mav_type = MAV_TYPE_QUADROTOR; // to avoid adding a new frame type to mavlink, we use quadrotor for tilt firmware 
 #elif (FRAME_CONFIG == TRI_FRAME)
     mav_type = MAV_TYPE_TRICOPTER;
 #elif (FRAME_CONFIG == HEXA_FRAME || FRAME_CONFIG == Y6_FRAME)

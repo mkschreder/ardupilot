@@ -159,11 +159,13 @@ void Copter::update_flight_mode()
         case STABILIZE:
             #if FRAME_CONFIG == HELI_FRAME
                 heli_stabilize_run();
+			#elif FRAME_CONFIG == QUAD_PTILT_FRAME
+				stabilize_ptilt_run(); 
             #else
                 stabilize_run();
             #endif
             break;
-
+		
         case ALT_HOLD:
             althold_run();
             break;

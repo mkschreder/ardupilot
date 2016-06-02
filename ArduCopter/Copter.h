@@ -301,6 +301,8 @@ private:
     // Motor Output
 #if FRAME_CONFIG == QUAD_FRAME
  #define MOTOR_CLASS AP_MotorsQuad
+#elif FRAME_CONFIG == QUAD_PTILT_FRAME
+ #define MOTOR_CLASS AP_MotorsQuadTilt
 #elif FRAME_CONFIG == TRI_FRAME
  #define MOTOR_CLASS AP_MotorsTri
 #elif FRAME_CONFIG == HEXA_FRAME
@@ -845,6 +847,8 @@ private:
     void sport_run();
     bool stabilize_init(bool ignore_checks);
     void stabilize_run();
+	bool stabilize_ptilt_init(bool ignore_checks); 
+	void stabilize_ptilt_run(); 
     void crash_check();
     void parachute_check();
     void parachute_release();

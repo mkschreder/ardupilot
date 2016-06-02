@@ -40,7 +40,10 @@ public:
     void                output_test(uint8_t motor_seq, int16_t pwm);
 
     // output_to_motors - sends minimum values out to the motors
-    void                output_to_motors();
+    virtual void        output_to_motors();
+
+	// output_to_servos - sends out complementary commands to any servos that need to be moved for flight control
+	virtual void 		output_to_servos(); 
 
     // add_motor using just position and yaw_factor (or prop direction)
     void                add_motor(int8_t motor_num, float angle_degrees, float yaw_factor, uint8_t testing_order);
