@@ -42,6 +42,15 @@ void Copter::stabilize_ptilt_run()
 	// INKO_TILT: in tilt mode, motor speeds are not effected by pilot pitch input. 
 	//cliSerial->printf("target_pitch: %f\n", target_pitch); 
 
+	// calculate pitch correction based on rangefinder sensor input
+	int range_front = constrain_int32(_rangefinder.readings[1], 0, 200);  
+	int range_back = constrain_int32(_rangefinder.readings[0], 0, 200);  
+	float pitComp = constrain_float((range_back - range_front) / 200.0, -1.0, 1.0);  
+	// calculate final compensated pitch
+	float npitch = constrain_float(target_pitch + (pitComp * 4500.0), -4500, 4500); 
+	//hal.console->printf("FR: %d, BK: %d, comp: %f, tp: %f, np: %f\n", range_front, range_back, pitComp, target_pitch, npitch); 
+	target_pitch = npitch; 
+
 	// compensate yaw and roll
 	//cliSerial->printf("target_yaw: %f, target_pitch: %f, target_roll: %f, ", target_yaw_rate, target_pitch, target_roll); 
 	float cosAngle = cos(radians(target_pitch * 0.01)); 
@@ -60,22 +69,25 @@ void Copter::stabilize_ptilt_run()
 	float bodyTilt = (hal.rcin->read(4) - 1500) / 500.0 * 90.0; 
 	// switch position in the middle = no body tilt 
 	int16_t sw = hal.rcin->read(5); 
-	if(sw > 1400 && sw < 1600) bodyTilt = 0; 
+	//if(sw > 1400 && sw < 1600) bodyTilt = 0; 
+	bodyTilt = 0; // disable for now
 	float motorTilt = target_pitch * 0.01; 	
 
 	motors.set_motor_tilt(motorTilt - bodyTilt); 
 	
-    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, bodyTilt, target_yaw_rate, get_smoothing_gain());
+    attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, bodyTilt * 100, target_yaw_rate, get_smoothing_gain());
 
 	// compensate throttle for motor tilt (throttle is 0-1.0 here)
 	// compensating for rc input pitch + current body pitch because body may pitch as well and we need to adjust thrust for that as well 
 	// total angle is constrained between 0 and 45 degrees. Beyond that we don't do compensation
 	// the cos here is always between 0.7 and 1.0 so we don't need to worry about div by zero
-	//hal.console->printf("motor_tilt: %f, body_tilt: %f, ", motorTilt - bodyTilt, bodyTilt); 
 	float compPitch = constrain_int16(abs(ahrs.pitch_sensor * 0.01 + target_pitch * 0.01), 0, 45); 
-	//hal.console->printf("pitch: %f, ", compPitch); 
 	float new_throttle = pilot_throttle_scaled / cos(radians(compPitch)); 
-	//hal.console->printf("throttle: %f, new_throttle: %f ", pilot_throttle_scaled, new_throttle); 
+
+	//hal.console->printf("PCH: %f, ", compPitch); 
+	//hal.console->printf("TR: %f MT: %f, BT: %f, ", target_roll, motorTilt - bodyTilt, bodyTilt); 
+	//hal.console->printf("TH: %f, THM: %f \n", pilot_throttle_scaled, new_throttle); 
+
 	pilot_throttle_scaled = new_throttle; 
 	
     // output pilot's throttle

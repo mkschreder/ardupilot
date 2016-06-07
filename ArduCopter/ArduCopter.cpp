@@ -284,6 +284,38 @@ void Copter::fast_loop()
     if (should_log(MASK_LOG_ANY)) {
         Log_Sensor_Health();
     }
+
+	read_rangefinders(); 
+}
+
+void Copter::read_rangefinders(void){
+	int16_t b = hal.uartE->read(); 
+	while((b & 0xff00) == 0){
+		char ch = b & 0xff; 
+		_rangefinder.buffer[_rangefinder.buf_pos++] = ch; 
+		
+		if(_rangefinder.buf_pos >= sizeof(_rangefinder.buffer)){ 
+			_rangefinder.buf_pos = 0; 
+			memset(_rangefinder.buffer, 0, sizeof(_rangefinder.buffer)); 
+			_rangefinder.buffer[_rangefinder.buf_pos++] = ch; 
+		}
+		else {
+			if(ch == '\n') {
+				_rangefinder.buffer[_rangefinder.buf_pos] = 0; 
+				_rangefinder.buf_pos = 0; 
+				int tmp[7]; 
+				int count = sscanf(_rangefinder.buffer, "%d %d %d", &tmp[0], &tmp[1], &tmp[2]); 
+				if(count == 3){
+					for(int c = 0; c < 6; c++){
+						_rangefinder.readings[c] = tmp[c+1]; 
+					}
+					//hal.console->printf("UART: %s, %d %d\n", _rangefinder.buffer, _rangefinder.readings[0], _rangefinder.readings[1]); 
+				}
+				break; 
+			}
+		}
+		b = hal.uartE->read(); 
+	}
 }
 
 // rc_loops - reads user input from transmitter/receiver

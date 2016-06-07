@@ -282,6 +282,9 @@ void Copter::init_ardupilot()
 
     cliSerial->print("\nReady to FLY ");
 
+	// initialize the rangefinder module uart
+	hal.uartE->begin(57600); 
+
     // flag that initialisation has completed
     ap.initialised = true;
 }

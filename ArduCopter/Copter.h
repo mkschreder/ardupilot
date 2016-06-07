@@ -556,6 +556,13 @@ private:
     // setup the var_info table
     AP_Param param_loader;
 
+	struct {
+		char buffer[64]; 
+		unsigned int buf_pos; 
+		int readings[6]; 
+	} _rangefinder; 
+	void read_rangefinders(); 
+
 #if FRAME_CONFIG == HELI_FRAME
     // Mode filter to reject RC Input glitches.  Filter size is 5, and it draws the 4th element, so it can reject 3 low glitches,
     // and 1 high glitch.  This is because any "off" glitches can be highly problematic for a helicopter running an ESC
