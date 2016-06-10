@@ -274,6 +274,7 @@ float Copter::get_surface_tracking_climb_rate(int16_t target_rate, float current
     velocity_correction = distance_error * g.rangefinder_gain;
     velocity_correction = constrain_float(velocity_correction, -THR_SURFACE_TRACKING_VELZ_MAX, THR_SURFACE_TRACKING_VELZ_MAX);
 
+	//hal.console->printf("Range alt: %d, target: %f, target_rate: %f\n", rangefinder_state.alt_cm, target_rangefinder_alt, target_rate + velocity_correction); 
     // return combined pilot climb rate + rate to correct rangefinder alt error
     return (target_rate + velocity_correction);
 #else

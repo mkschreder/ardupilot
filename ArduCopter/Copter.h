@@ -88,6 +88,7 @@
 #include <AP_RPM/AP_RPM.h>
 #include <AC_InputManager/AC_InputManager.h>        // Pilot input handling library
 #include <AC_InputManager/AC_InputManager_Heli.h>   // Heli specific pilot input handling library
+#include <AP_RangeFinder/AP_RangeFinder_6DOF.h>
 
 // Configuration
 #include "defines.h"
@@ -556,14 +557,9 @@ private:
     // setup the var_info table
     AP_Param param_loader;
 
-	struct {
-		char buffer[64]; 
-		unsigned int buf_pos; 
-		int readings[6]; 
-	} _rangefinder; 
-	void read_rangefinders(); 
+	AP_RangeFinder_6DOF rangefinders; 
 
-#if FRAME_CONFIG == HELI_FRAME
+	#if FRAME_CONFIG == HELI_FRAME
     // Mode filter to reject RC Input glitches.  Filter size is 5, and it draws the 4th element, so it can reject 3 low glitches,
     // and 1 high glitch.  This is because any "off" glitches can be highly problematic for a helicopter running an ESC
     // governor.  Even a single "off" frame can cause the rotor to slow dramatically and take a long time to restart.

@@ -35,15 +35,18 @@ void Copter::init_rangefinder(void)
 #endif
 }
 
-// return rangefinder altitude in centimeters
 void Copter::read_rangefinder(void)
 {
+	rangefinder_state.enabled = 1; 
 #if RANGEFINDER_ENABLED == ENABLED
-    rangefinder.update();
+    //rangefinder.update();
+	rangefinders.update(); 
 
-    rangefinder_state.alt_healthy = ((rangefinder.status() == RangeFinder::RangeFinder_Good) && (rangefinder.range_valid_count() >= RANGEFINDER_HEALTH_MAX));
+    //rangefinder_state.alt_healthy = ((rangefinder.status() == RangeFinder::RangeFinder_Good) && (rangefinder.range_valid_count() >= RANGEFINDER_HEALTH_MAX));
+	rangefinder_state.alt_healthy = rangefinders.get_bottom_clearance_cm() <= 199; 
 
-    int16_t temp_alt = rangefinder.distance_cm();
+    //int16_t temp_alt = rangefinder.distance_cm();
+    int16_t temp_alt = rangefinders.get_bottom_clearance_cm();
 
  #if RANGEFINDER_TILT_CORRECTION == ENABLED
     // correct alt for angle of the rangefinder
@@ -66,6 +69,7 @@ void Copter::read_rangefinder(void)
     }
 
     // send rangefinder altitude and health to waypoint navigation library
+	//hal.console->printf("UPDATE ALT: %d %d %d!\n", (int)rangefinder_state.enabled, (int)rangefinder_state.alt_healthy, (int)rangefinder_state.alt_cm_filt.get()); 
     wp_nav.set_rangefinder_alt(rangefinder_state.enabled, rangefinder_state.alt_healthy, rangefinder_state.alt_cm_filt.get());
 
 #else

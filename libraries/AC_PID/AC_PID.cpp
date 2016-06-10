@@ -77,6 +77,10 @@ void AC_PID::filt_hz(float hz)
     _filt_hz = MAX(_filt_hz, AC_PID_FILT_HZ_MIN);
 }
 
+void AC_PID::reset_filter(){
+	_flags._reset_filter = true; 
+}
+
 // set_input_filter_all - set input to PID controller
 //  input is filtered before the PID controllers are run
 //  this should be called before any other calls to get_p, get_i or get_d

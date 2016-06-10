@@ -280,10 +280,9 @@ void Copter::init_ardupilot()
     ins.set_raw_logging(should_log(MASK_LOG_IMU_RAW));
     ins.set_dataflash(&DataFlash);
 
-    cliSerial->print("\nReady to FLY ");
+	rangefinders.init(); 
 
-	// initialize the rangefinder module uart
-	hal.uartE->begin(57600); 
+    cliSerial->print("\nReady to FLY ");
 
     // flag that initialisation has completed
     ap.initialised = true;
@@ -329,6 +328,7 @@ bool Copter::position_ok()
         return false;
     }
 
+	return true; 
     // check ekf position estimate
     return (ekf_position_ok() || optflow_position_ok());
 }

@@ -121,12 +121,16 @@ void AP_MotorsMatrix::output_to_motors()
     // send output to each motor
     hal.rcout->cork();
 
-    for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
-        if (motor_enabled[i]) {
-            rc_write(i, motor_out[i]);
-        }
-    }
+	//hal.console->printf("MOTORS: "); 
+	for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
+		if (motor_enabled[i]) {
+			rc_write(i, motor_out[i]);
+			//hal.console->printf("%d ", motor_out[i]); 
+		}
+	}
 	
+	//hal.console->printf("\n"); 
+
 	// process servo output 
 	output_to_servos(); 
 
