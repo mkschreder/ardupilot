@@ -39,8 +39,7 @@ void Copter::read_rangefinder(void)
 {
 	rangefinder_state.enabled = 1; 
 #if RANGEFINDER_ENABLED == ENABLED
-    //rangefinder.update();
-	rangefinders.update(); 
+   	//rangefinder.update();
 
     //rangefinder_state.alt_healthy = ((rangefinder.status() == RangeFinder::RangeFinder_Good) && (rangefinder.range_valid_count() >= RANGEFINDER_HEALTH_MAX));
 	rangefinder_state.alt_healthy = rangefinders.get_bottom_clearance_cm() <= 199; 
