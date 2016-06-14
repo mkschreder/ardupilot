@@ -361,7 +361,6 @@ public:
         k_param_autotune_min_d, // 251
         k_param_DataFlash = 253, // 253 - Logging Group
 
-		k_param_tilt
         // 254,255: reserved
     };
 
