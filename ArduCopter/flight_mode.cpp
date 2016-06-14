@@ -38,6 +38,8 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
         case STABILIZE:
             #if FRAME_CONFIG == HELI_FRAME
                 success = heli_stabilize_init(ignore_checks);
+			#elif FRAME_CONFIG == PTILT_FRAME
+				success = stabilize_ptilt_init(ignore_checks); 
             #else
                 success = stabilize_init(ignore_checks);
             #endif

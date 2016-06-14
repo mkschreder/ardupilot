@@ -96,10 +96,11 @@ void AP_RangeFinder_6DOF::update(float dt){
 	for(int c = 0; c < 6; c++){
 		float prev = _filters[c].get(); 
 		float val = (float)_readings[c] / 58.0f; 
-		if(val > 105.0) val = 105.0; 
-		_filters[c].apply(val, dt); 
-		float vel = (prev - _filters[c].get()) / dt; 
-		//if(abs(vel) < 0.8) vel = 0; 
-		_vel_filters[c].apply(vel, dt); 
+		if(val < 199.0) {
+			_filters[c].apply(val, dt); 
+			float vel = (prev - _filters[c].get()) / dt; 
+			//if(abs(vel) < 0.8) vel = 0; 
+			_vel_filters[c].apply(vel, dt); 
+		}
 	}
 }

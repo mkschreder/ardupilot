@@ -199,6 +199,7 @@ private:
     // Optical flow sensor
 #if OPTFLOW == ENABLED
     OpticalFlow optflow{ahrs};
+	Vector2f _optflow_rate; 
 #endif
 
     // gnd speed limit required to observe optical flow sensor limits
