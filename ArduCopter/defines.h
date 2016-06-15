@@ -81,6 +81,7 @@ enum aux_sw_func {
 #define OCTA_QUAD_FRAME 7
 #define SINGLE_FRAME 8
 #define COAX_FRAME 9
+#define QUAD_PTILT_FRAME 10 
 
 // HIL enumerations
 #define HIL_MODE_DISABLED               0

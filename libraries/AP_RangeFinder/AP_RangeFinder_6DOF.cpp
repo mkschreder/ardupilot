@@ -17,7 +17,8 @@ License: GPLv3
 #define DOF_SENSOR_TOP 5
 #define DOF_SENSOR_BOTTOM 4
 
-#define DOF_SENSOR_NO_READING 200
+#define DOF_SENSOR_MAX_RANGE 400
+#define DOF_SENSOR_NO_READING -1
 
 /*
 AP_RangeFinder_6DOF::AP_RangeFinder_6DOF(RangeFinder &ranger, uint8_t instance, RangeFinder::RangeFinder_State &_state):
@@ -38,17 +39,17 @@ void AP_RangeFinder_6DOF::init(){
 	}
 }
 
-float AP_RangeFinder_6DOF::get_front_clearance_cm(){ return constrain_float(_filters[1].get(), 0, 200.0); } 
-float AP_RangeFinder_6DOF::get_back_clearance_cm(){ return constrain_float(_filters[0].get(), 0, 200.0); } 
-float AP_RangeFinder_6DOF::get_right_clearance_cm(){ return constrain_float(_filters[3].get(), 0, 200.0); } 
-float AP_RangeFinder_6DOF::get_left_clearance_cm(){ return constrain_float(_filters[2].get(), 0, 200.0); } 
-float AP_RangeFinder_6DOF::get_top_clearance_cm(){ return constrain_float(_filters[5].get(), 0, 200.0); } 
-float AP_RangeFinder_6DOF::get_bottom_clearance_cm(){ return constrain_float(_filters[4].get(), 0, 200.0); } 
+float AP_RangeFinder_6DOF::get_front_clearance_cm(){ return constrain_float(_filters[1].get(), 0, DOF_SENSOR_MAX_RANGE); } 
+float AP_RangeFinder_6DOF::get_back_clearance_cm(){ return constrain_float(_filters[0].get(), 0, DOF_SENSOR_MAX_RANGE); } 
+float AP_RangeFinder_6DOF::get_right_clearance_cm(){ return constrain_float(_filters[3].get(), 0, DOF_SENSOR_MAX_RANGE); } 
+float AP_RangeFinder_6DOF::get_left_clearance_cm(){ return constrain_float(_filters[2].get(), 0, DOF_SENSOR_MAX_RANGE); } 
+float AP_RangeFinder_6DOF::get_top_clearance_cm(){ return constrain_float(_filters[5].get(), 0, DOF_SENSOR_MAX_RANGE); } 
+float AP_RangeFinder_6DOF::get_bottom_clearance_cm(){ return constrain_float(_filters[4].get(), 0, DOF_SENSOR_MAX_RANGE); } 
 
 float AP_RangeFinder_6DOF::get_raw_front() { return _readings[DOF_SENSOR_FRONT] / 58.0f; }
 float AP_RangeFinder_6DOF::get_raw_back() { return _readings[DOF_SENSOR_BACK] / 58.0f; }
 
-float AP_RangeFinder_6DOF::get_velocity_y(){
+float AP_RangeFinder_6DOF::get_velocity_forward(){
 	return _vel_filters[DOF_SENSOR_FRONT].get(); 
 	if(_readings[DOF_SENSOR_FRONT] == DOF_SENSOR_NO_READING && _readings[DOF_SENSOR_BACK] == DOF_SENSOR_NO_READING) return 0; 
 	else if(_readings[DOF_SENSOR_FRONT] == DOF_SENSOR_NO_READING) return _vel_filters[DOF_SENSOR_BACK].get(); 
@@ -56,7 +57,7 @@ float AP_RangeFinder_6DOF::get_velocity_y(){
 	return (_vel_filters[DOF_SENSOR_FRONT].get() - _vel_filters[DOF_SENSOR_BACK].get()) * 0.5; 
 }
 
-float AP_RangeFinder_6DOF::get_velocity_x(){
+float AP_RangeFinder_6DOF::get_velocity_right(){
 	if(_readings[DOF_SENSOR_LEFT] == DOF_SENSOR_NO_READING && _readings[DOF_SENSOR_RIGHT] == DOF_SENSOR_NO_READING) return 0; 
 	else if(_readings[DOF_SENSOR_LEFT] == DOF_SENSOR_NO_READING) return _vel_filters[DOF_SENSOR_RIGHT].get(); 
 	else if(_readings[DOF_SENSOR_RIGHT] == DOF_SENSOR_NO_READING) return _vel_filters[DOF_SENSOR_LEFT].get(); 
@@ -94,13 +95,15 @@ void AP_RangeFinder_6DOF::update(float dt){
 	
 	// apply filters each time update is called
 	for(int c = 0; c < 6; c++){
-		float prev = _filters[c].get(); 
-		float val = (float)_readings[c] / 58.0f; 
-		if(val < 199.0) {
+		if(_readings[c] > 0) {
+			float val = (float)_readings[c] / 58.0f; 
+			float prev = _filters[c].get(); 
 			_filters[c].apply(val, dt); 
 			float vel = (prev - _filters[c].get()) / dt; 
-			//if(abs(vel) < 0.8) vel = 0; 
 			_vel_filters[c].apply(vel, dt); 
-		}
+		} else {
+			_filters[c].apply(DOF_SENSOR_MAX_RANGE, dt); 
+			_vel_filters[c].apply(0, dt); 
+		} 
 	}
 }

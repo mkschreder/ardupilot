@@ -82,9 +82,9 @@ void Copter::stabilize_ptilt_run()
 	target_roll = range_avoid.get_desired_roll_angle() * 100.0f; 
 
 	//hal.console->printf("ALT: %d, VRIGHT: %f, pc: %f, rc: %f\n", (int)range_bottom, rangefinders.get_velocity_right(), caPitchComp, caRollComp); 
-	hal.console->printf("%d %f %f %f %f %f %f %f %f %f %f\n", AP_HAL::millis(), 
-			rc_p, rc_i, rc_d, 
-			range_avoid.get_desired_pitch_angle(), range_avoid.get_desired_roll_angle(), range_avoid.get_filtered_flow().x, range_avoid.get_filtered_flow().y, -_optflow_rate.x, _optflow_rate.y, rangefinders.get_bottom_clearance_cm() * 0.01); 
+	//hal.console->printf("%d %f %f %f %f %f %f %f %f %f %f\n", AP_HAL::millis(), 
+//			rc_p, rc_i, rc_d, 
+//			range_avoid.get_desired_pitch_angle(), range_avoid.get_desired_roll_angle(), range_avoid.get_filtered_flow().x, range_avoid.get_filtered_flow().y, -_optflow_rate.x, _optflow_rate.y, rangefinders.get_bottom_clearance_cm() * 0.01); 
 	//hal.console->printf("Y: %f, P: %f, R: %f, kP: %f, kI: %f, kD: %f, BOTTOM: %f, FRONT: %f, BACK %f, LEFT: %f, RIGHT: %f, PC: %f, RC: %f\n", 
 	//				target_yaw_rate, target_pitch, target_roll, rc_p, rc_i, rc_d, range_bottom, range_front, range_back, range_left, range_right, caPitchComp, caRollComp); 
 	//hal.console->printf("FR: %f, BK: %f, comp: %f, tp: %f, np: %f, rc: %f, nroll: %f\n", range_front, range_back, pitComp, target_pitch, npitch, target_roll, rllComp); 
@@ -102,9 +102,11 @@ void Copter::stabilize_ptilt_run()
 
 	target_pitch = constrain_float(target_pitch, -4500, 4500); 
 	target_roll = constrain_float(target_roll, -4500, 4500);
-
+	
+	//hal.console->printf("%f %f\n", vel.x, vel.y); 
 	//hal.console->printf("P: %f, R: %f, PC: %f, RC: %f\n", target_pitch, target_roll, PITCH_CORRECT_FACTOR, ROLL_CORRECT_FACTOR); 
 
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
 	// support body pitch on channel 4 so we can adjust body tilting when we fly. 
 	// this will also rotate the tilt motors in the opposite direction. 
 	// TODO: make all of this stuff configurable
@@ -116,8 +118,9 @@ void Copter::stabilize_ptilt_run()
 	float motorTilt = target_pitch * 0.01; 	
 
 	motors.set_motor_tilt(motorTilt - bodyTilt); 
-	
+
 	target_pitch = 0; 
+#endif
 
     //attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, bodyTilt * 100, target_yaw_rate, get_smoothing_gain());
 

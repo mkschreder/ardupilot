@@ -33,8 +33,8 @@ public:
 	float get_raw_front(); 
 	float get_raw_back(); 
 
-	float get_velocity_y(); 
-	float get_velocity_x(); 
+	float get_velocity_forward(); 
+	float get_velocity_right(); 
 private: 
 	AP_HAL::UARTDriver *_port; 
 
@@ -42,6 +42,7 @@ private:
 	unsigned int _buf_pos; 
 	unsigned long long _last_reading_time; 
 	int _readings[6]; 
+	int _health[6]; 
 	LowPassFilterFloat _filters[6]; 
 	LowPassFilterFloat _vel_filters[6]; 
 }; 

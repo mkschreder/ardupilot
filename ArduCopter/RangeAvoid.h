@@ -31,5 +31,6 @@ private:
 	LowPassFilterFloat _flow_front_filt, _flow_right_filt; 
 	float _pitchComp, _rollComp; 
 	float _flow_front_filtered, _flow_right_filtered; 
+	float _flow_distance_front, _flow_distance_right; 
 	float _desired_forward, _desired_right; 
 }; 
