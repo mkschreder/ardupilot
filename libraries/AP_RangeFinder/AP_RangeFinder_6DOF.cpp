@@ -46,21 +46,35 @@ float AP_RangeFinder_6DOF::get_left_clearance_cm(){ return constrain_float(_filt
 float AP_RangeFinder_6DOF::get_top_clearance_cm(){ return constrain_float(_filters[5].get(), 0, DOF_SENSOR_MAX_RANGE); } 
 float AP_RangeFinder_6DOF::get_bottom_clearance_cm(){ return constrain_float(_filters[4].get(), 0, DOF_SENSOR_MAX_RANGE); } 
 
-float AP_RangeFinder_6DOF::get_raw_front() { return _readings[DOF_SENSOR_FRONT] / 58.0f; }
-float AP_RangeFinder_6DOF::get_raw_back() { return _readings[DOF_SENSOR_BACK] / 58.0f; }
+bool AP_RangeFinder_6DOF::have_front() { return _readings[DOF_SENSOR_FRONT] != DOF_SENSOR_NO_READING; } 
+bool AP_RangeFinder_6DOF::have_back() { return _readings[DOF_SENSOR_BACK] != DOF_SENSOR_NO_READING; } 
+bool AP_RangeFinder_6DOF::have_left() { return _readings[DOF_SENSOR_LEFT] != DOF_SENSOR_NO_READING; } 
+bool AP_RangeFinder_6DOF::have_right() { return _readings[DOF_SENSOR_RIGHT] != DOF_SENSOR_NO_READING; } 
+bool AP_RangeFinder_6DOF::have_bottom() { return _readings[DOF_SENSOR_BOTTOM] != DOF_SENSOR_NO_READING; } 
+bool AP_RangeFinder_6DOF::have_top() { return _readings[DOF_SENSOR_TOP] != DOF_SENSOR_NO_READING; } 
+
+// returns true if sensor is able to provide position of a center point between it's readings
+bool AP_RangeFinder_6DOF::have_center_point(){
+	if((have_left() && have_right()) || (have_back() && have_front()) || (have_bottom() && have_top())) return true; 
+	return false; 
+}
+
+// returns center point offset from current position based on sensor measurement, |0| otherwise 
+const Vector3f &AP_RangeFinder_6DOF::get_center_point_offset() {
+	return _center_point; 
+}
 
 float AP_RangeFinder_6DOF::get_velocity_forward(){
-	return _vel_filters[DOF_SENSOR_FRONT].get(); 
-	if(_readings[DOF_SENSOR_FRONT] == DOF_SENSOR_NO_READING && _readings[DOF_SENSOR_BACK] == DOF_SENSOR_NO_READING) return 0; 
-	else if(_readings[DOF_SENSOR_FRONT] == DOF_SENSOR_NO_READING) return _vel_filters[DOF_SENSOR_BACK].get(); 
-	else if(_readings[DOF_SENSOR_BACK] == DOF_SENSOR_NO_READING) return _vel_filters[DOF_SENSOR_FRONT].get(); 
+	if(!have_front() && !have_back()) return 0; 
+	else if(have_back()) return _vel_filters[DOF_SENSOR_BACK].get(); 
+	else if(have_front()) return _vel_filters[DOF_SENSOR_FRONT].get(); 
 	return (_vel_filters[DOF_SENSOR_FRONT].get() - _vel_filters[DOF_SENSOR_BACK].get()) * 0.5; 
 }
 
 float AP_RangeFinder_6DOF::get_velocity_right(){
-	if(_readings[DOF_SENSOR_LEFT] == DOF_SENSOR_NO_READING && _readings[DOF_SENSOR_RIGHT] == DOF_SENSOR_NO_READING) return 0; 
-	else if(_readings[DOF_SENSOR_LEFT] == DOF_SENSOR_NO_READING) return _vel_filters[DOF_SENSOR_RIGHT].get(); 
-	else if(_readings[DOF_SENSOR_RIGHT] == DOF_SENSOR_NO_READING) return _vel_filters[DOF_SENSOR_LEFT].get(); 
+	if(!have_left() && !have_right()) return 0; 
+	else if(have_right()) return _vel_filters[DOF_SENSOR_RIGHT].get(); 
+	else if(have_left()) return _vel_filters[DOF_SENSOR_LEFT].get(); 
 	return (_vel_filters[DOF_SENSOR_RIGHT].get() - _vel_filters[DOF_SENSOR_LEFT].get()) * 0.5; 
 }
 
@@ -95,15 +109,29 @@ void AP_RangeFinder_6DOF::update(float dt){
 	
 	// apply filters each time update is called
 	for(int c = 0; c < 6; c++){
-		if(_readings[c] > 0) {
+		if(_readings[c] > 0 && !is_zero(dt)) {
+			// update readings filters
 			float val = (float)_readings[c] / 58.0f; 
-			float prev = _filters[c].get(); 
 			_filters[c].apply(val, dt); 
-			float vel = (prev - _filters[c].get()) / dt; 
+
+			// update velocity calculations
+			float vel = (_prev_readings[c] - _readings[c]) / 58.0f / dt; 
 			_vel_filters[c].apply(vel, dt); 
 		} else {
+			// when there is no reading then in this case sensor will report maximum range 
 			_filters[c].apply(DOF_SENSOR_MAX_RANGE, dt); 
 			_vel_filters[c].apply(0, dt); 
 		} 
 	}
+	// store previous readings for velocity calculation
+	memcpy(_prev_readings, _readings, sizeof(_readings)); 
+
+	// calculate center point offset
+	// pixhawk front is +X, right is +Y, bottom is +Z
+	Vector3f center; 
+	if(have_front() && have_back()) center.x = (_readings[DOF_SENSOR_FRONT] - _readings[DOF_SENSOR_BACK]) * (0.5 / 58.0); 
+	if(have_left() && have_right()) center.y = (_readings[DOF_SENSOR_RIGHT] - _readings[DOF_SENSOR_LEFT]) * (0.5 / 58.0); 
+	if(have_top() && have_bottom()) center.z = (_readings[DOF_SENSOR_BOTTOM] - _readings[DOF_SENSOR_TOP]) * (0.5 / 58.0); 
+	float a = dt / (dt + (1.0f/(M_2PI * 0.8))); 
+	_center_point += (center - _center_point) * a; 
 }

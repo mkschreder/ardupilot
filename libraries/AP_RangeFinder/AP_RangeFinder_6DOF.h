@@ -30,8 +30,19 @@ public:
 	float get_top_clearance_cm();  
 	float get_bottom_clearance_cm();  
 
-	float get_raw_front(); 
-	float get_raw_back(); 
+	// return true if corresponding sensor is available and healthy
+	bool have_front(); 
+	bool have_back(); 
+	bool have_left(); 
+	bool have_right(); 
+	bool have_bottom(); 
+	bool have_top(); 
+
+	// returns true if sensor is able to provide position of a center point between it's readings
+	bool have_center_point(); 
+
+	// returns center point offset from current position based on sensor measurement, |0| otherwise 
+	const Vector3f &get_center_point_offset(); 
 
 	float get_velocity_forward(); 
 	float get_velocity_right(); 
@@ -41,8 +52,10 @@ private:
 	char _buffer[64]; 
 	unsigned int _buf_pos; 
 	unsigned long long _last_reading_time; 
-	int _readings[6]; 
-	int _health[6]; 
+	int32_t _readings[6]; 
+	int32_t _prev_readings[6]; 
+	int32_t _health[6]; 
+	Vector3f _center_point; // computed center point (if available)
 	LowPassFilterFloat _filters[6]; 
 	LowPassFilterFloat _vel_filters[6]; 
 }; 

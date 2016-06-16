@@ -42,7 +42,7 @@ void Copter::read_rangefinder(void)
    	//rangefinder.update();
 
     //rangefinder_state.alt_healthy = ((rangefinder.status() == RangeFinder::RangeFinder_Good) && (rangefinder.range_valid_count() >= RANGEFINDER_HEALTH_MAX));
-	rangefinder_state.alt_healthy = rangefinders.get_bottom_clearance_cm() <= 199; 
+	rangefinder_state.alt_healthy = rangefinders.have_bottom(); 
 
     //int16_t temp_alt = rangefinder.distance_cm();
     int16_t temp_alt = rangefinders.get_bottom_clearance_cm();

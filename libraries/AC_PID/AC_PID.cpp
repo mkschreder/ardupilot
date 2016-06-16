@@ -174,6 +174,11 @@ void AC_PID::reset_I()
     _integrator = 0;
 }
 
+void AC_PID::reset(){
+	reset_I(); 
+	reset_filter(); 
+}
+
 void AC_PID::load_gains()
 {
     _kp.load();

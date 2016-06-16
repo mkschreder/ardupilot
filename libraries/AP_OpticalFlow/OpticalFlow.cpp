@@ -83,7 +83,8 @@ void OpticalFlow::update(void)
         backend->update();
     }
     // only healthy if the data is less than 0.5s old
-    _flags.healthy = (AP_HAL::millis() - _last_update_ms < 500);
+	// and also if surface quality is better than 50%
+    _flags.healthy = (AP_HAL::millis() - _last_update_ms < 500) && (_state.surface_quality > (0xff >> 1));
 }
 
 void OpticalFlow::setHIL(const struct OpticalFlow::OpticalFlow_state &state)
