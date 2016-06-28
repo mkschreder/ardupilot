@@ -4,8 +4,36 @@
 #include <AP_RangeFinder/AP_RangeFinder_6DOF.h>
 #include <AP_OpticalFlow/OpticalFlow.h>
 
+#include <mathlib/mathlib.h>
+
 class RangeAvoid {
 public: 
+	class RangeFilter {
+	public: 
+		RangeFilter(); 	
+		void update(float pos, float vel, float acc, float dt); 
+		float get_center_offset() const;
+		float get_velocity() const; 
+	private: 
+		// state transition matrix
+		math::Matrix<3, 3> F; 
+		// external forces matrix
+		math::Matrix<3, 3> B;
+		// input vector to state matrix 
+		math::Matrix<3, 3> H;
+		// kalman gain matrix
+		math::Matrix<3, 3> K; 
+		// prediction error matrix
+		math::Matrix<3, 3> P;  
+		// sensor noise
+		math::Matrix<3, 3> R; 
+		// process noise 
+		math::Matrix<3, 3> Q; 
+		
+		// filter state 
+		math::Vector<3> xk; 
+	}; 
+
 	RangeAvoid(AP_AHRS *ahrs, AP_RangeFinder_6DOF *rangefinder, AP_InertialSensor *ins, OpticalFlow *optflow, AP_Baro *baro); 
 	
 	void set_vel_kP(float kp); 
@@ -23,12 +51,18 @@ public:
 	float get_desired_pitch_angle(); 
 	float get_desired_roll_angle(); 
 
+	Vector3f get_center_offset(); 
+	Vector3f get_velocity(); 
+
 	const Vector2f get_filtered_flow(); 
 
 	void reset(); 
 private: 
 	void update_flow_velocity(const Vector2f &flow, float altitude, float dt); 
+	void update_ekf(float dt); 
 	Vector2f get_wall_avoidance_velocity_compensation(); 
+
+	RangeFilter xf, yf, zf; 
 
 	AP_RangeFinder_6DOF *_rangefinder; 
 	AP_AHRS *_ahrs; 
@@ -45,4 +79,5 @@ private:
 	float _output_pitch, _output_roll; 
 	float _forward_response; 
 	float _baro_zero_altitude; 
+	Vector3f _velocity; 
 }; 

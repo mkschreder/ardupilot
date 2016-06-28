@@ -29,7 +29,8 @@ namespace AP_HAL {
     class Scheduler;
     class Semaphore;
     class OpticalFlow;
-    
+	class DebugConsole; 
+
     class Util;
 
     /* Utility Classes */

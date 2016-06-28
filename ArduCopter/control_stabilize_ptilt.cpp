@@ -91,8 +91,8 @@ void Copter::stabilize_ptilt_run()
 	float rc_d = 0.25; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 	
 	float rc_center_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.1; 
-	float rc_center_i = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.02; 
-	float rc_center_d = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_center_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.02; 
+	float rc_center_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.08; 
 
 	range_avoid.set_vel_kP(rc_p); 
 	range_avoid.set_vel_kI(rc_i); 
@@ -114,16 +114,56 @@ void Copter::stabilize_ptilt_run()
 	} else {
 		range_avoid.reset(); 
 	}
+	
+	float center_offset = range_avoid.get_center_offset().x; 
+	float front, back, right, left, bottom, top; 
+	rangefinders.get_raw_readings_cm(&front, &back, &right, &left, &bottom, &top); 
 
-	//hal.console->printf("ALT: %d, VRIGHT: %f, pc: %f, rc: %f\n", (int)range_bottom, rangefinders.get_velocity_right(), caPitchComp, caRollComp); 
-/*	
-	hal.console->printf("%d %f %f %f %f %f %f %f %f %f %f\n", AP_HAL::millis(), 
+	dbgConsole->printf("%f, %f, %f, %f\n", rangefinders.get_center_point_offset().x * 0.01, center_offset, range_avoid.get_velocity().x, rangefinders.get_velocity_forward() * 0.01); 
+	//dbgConsole->printf("%f, %f, %f\n", front, back, rangefinders.get_front_clearance_cm()); 
+	/*
+	dbgConsole->printf("%d, ", AP_HAL::millis()); 
+	float front, back, left, right, bottom, top; 
+	rangefinders.get_raw_readings_cm(&front, &back, &left, &right, &bottom, &top); 
+	// 2
+	dbgConsole->printf("%f, %f, ", front, back); 
+	Vector3f accel, gyro; 
+	accel = ins.get_accel(); gyro = ins.get_gyro(); 
+	// 4
+	dbgConsole->printf("%f, %f, %f, ", accel.x, accel.y, accel.z); 
+	// 7
+	dbgConsole->printf("%f, ", ahrs.pitch_sensor / 100.0); 
+	dbgConsole->printf("\n"); 
+*/
+	/*
+	dbgConsole->printf("%d, ", AP_HAL::millis()); 
+	float front, back, left, right, bottom, top; 
+	rangefinders.get_raw_readings_cm(&front, &back, &left, &right, &bottom, &top); 
+	// 2
+	dbgConsole->printf("%f, %f, %f, %f, %f, ", front, back, left, right, bottom); 
+	// 7
+	dbgConsole->printf("%f, %f, %f, %f, %f, ", rangefinders.get_front_clearance_cm(), rangefinders.get_back_clearance_cm(),
+		rangefinders.get_left_clearance_cm(), rangefinders.get_right_clearance_cm(), rangefinders.get_bottom_clearance_cm()); 
+	Vector3f accel, gyro; 
+	accel = ins.get_accel(); gyro = ins.get_gyro(); 
+	// 12
+	dbgConsole->printf("%f, %f, %f, %f, %f, %f, ", accel.x, accel.y, accel.z, gyro.x, gyro.y, gyro.z); 
+	// 18
+	dbgConsole->printf("%f, %f, %f, ", ahrs.yaw_sensor / 100.0, ahrs.pitch_sensor / 100.0, ahrs.roll_sensor / 100.0); 
+	// 21
+	dbgConsole->printf("%f, %f ", _optflow_rate.x, _optflow_rate.y); 
+	dbgConsole->printf("\n"); 
+	*/
+	/*
+		"%f %f %f %f %f ", 
+		"%f %f %f %f %f\n", AP_HAL::millis(), 
+			
 			(double)rc_p, (double)rc_i, (double)rc_d, 
 			(double)range_avoid.get_desired_pitch_angle(), (double)range_avoid.get_desired_roll_angle(), 
 			(double)range_avoid.get_filtered_flow().x, (double)range_avoid.get_filtered_flow().y, 
 			(double)-_optflow_rate.x, (double)_optflow_rate.y, 
 			(double)(rangefinders.get_bottom_clearance_cm() * 0.01f)); 
-*/	
+	*/
 	//hal.console->printf("Y: %f, P: %f, R: %f, kP: %f, kI: %f, kD: %f, BOTTOM: %f, FRONT: %f, BACK %f, LEFT: %f, RIGHT: %f, PC: %f, RC: %f\n", 
 	//				target_yaw_rate, target_pitch, target_roll, rc_p, rc_i, rc_d, range_bottom, range_front, range_back, range_left, range_right, caPitchComp, caRollComp); 
 	//hal.console->printf("FR: %f, BK: %f, comp: %f, tp: %f, np: %f, rc: %f, nroll: %f\n", range_front, range_back, pitComp, target_pitch, npitch, target_roll, rllComp); 
