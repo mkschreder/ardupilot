@@ -86,13 +86,13 @@ void Copter::stabilize_ptilt_run()
 	// INKO_TILT: here we have to feed pilot rc control 0 because we will then apply rc control to the servo directly. 
 	// INKO_TILT: in tilt mode, motor speeds are not effected by pilot pitch input. 
 
-	float rc_p = 20; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.2; 
-	float rc_i = 1.512; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.008; 
-	float rc_d = 0.25; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.2; 
+	float rc_i = 0; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.008; 
+	float rc_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 	
-	float rc_center_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.1; 
-	float rc_center_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.02; 
-	float rc_center_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.08; 
+	float rc_center_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.2; 
+	float rc_center_i = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.02; 
+	float rc_center_d = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.08; 
 
 	range_avoid.set_vel_kP(rc_p); 
 	range_avoid.set_vel_kI(rc_i); 
@@ -114,12 +114,13 @@ void Copter::stabilize_ptilt_run()
 	} else {
 		range_avoid.reset(); 
 	}
-	
+/*	
 	float center_offset = range_avoid.get_center_offset().x; 
 	float front, back, right, left, bottom, top; 
 	rangefinders.get_raw_readings_cm(&front, &back, &right, &left, &bottom, &top); 
 
 	dbgConsole->printf("%f, %f, %f, %f\n", rangefinders.get_center_point_offset().x * 0.01, center_offset, range_avoid.get_velocity().x, rangefinders.get_velocity_forward() * 0.01); 
+	*/
 	//dbgConsole->printf("%f, %f, %f\n", front, back, rangefinders.get_front_clearance_cm()); 
 	/*
 	dbgConsole->printf("%d, ", AP_HAL::millis()); 

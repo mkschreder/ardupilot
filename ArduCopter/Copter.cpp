@@ -119,7 +119,8 @@ Copter::Copter(void) :
     gcs_out_of_time(false),
     param_loader(var_info),
 	rangefinders(hal.uartE),
-	range_avoid(&ahrs, &rangefinders, &ins, &optflow, &barometer)
+	ranger_nav(&ahrs, &rangefinders, &ins, &optflow, &barometer),
+	range_avoid(&ranger_nav)
 {
     memset(&current_loc, 0, sizeof(current_loc));
 

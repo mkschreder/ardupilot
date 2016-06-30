@@ -44,8 +44,11 @@ void Copter::read_rangefinder(void)
     //rangefinder_state.alt_healthy = ((rangefinder.status() == RangeFinder::RangeFinder_Good) && (rangefinder.range_valid_count() >= RANGEFINDER_HEALTH_MAX));
 	rangefinder_state.alt_healthy = rangefinders.have_bottom(); 
 
+	float front, back, right, left, bottom, top; 
+	rangefinders.get_readings_m(&front, &back, &right, &left, &bottom, &top); 
+
     //int16_t temp_alt = rangefinder.distance_cm();
-    int16_t temp_alt = rangefinders.get_bottom_clearance_cm();
+    int16_t temp_alt = bottom * 100; //rangefinders.get_bottom_clearance_cm();
 
  #if RANGEFINDER_TILT_CORRECTION == ENABLED
     // correct alt for angle of the rangefinder

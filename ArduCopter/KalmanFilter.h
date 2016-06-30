@@ -22,6 +22,14 @@
 template<unsigned int N>
 class KalmanFilter {
 public: 
+	KalmanFilter(){
+		B.identity(); 
+		H.identity(); 
+		K.identity(); 
+		P.identity(); 
+		R.identity(); 
+		Q.identity(); 
+	}
 	void update(const math::Vector<N> &zk, const math::Vector<N> &uk, float dt){
 		// predict
 		xk = F * xk + B * uk; 
@@ -38,6 +46,15 @@ public:
 	}
 	void set_state_transition_matrix(const math::Matrix<N, N> &mat){
 		F = mat; 
+	}
+	void set_sensor_noise_covariance_matrix(const math::Matrix<N, N> &mat){
+		R = mat; 
+	}
+	void set_process_noise_covariance_matrix(const math::Matrix<N, N> &mat){
+		Q = mat; 
+	}
+	void set_state_input_matrix(const math::Matrix<N, N> &mat){
+		H = mat; 
 	}
 	const math::Vector<N> &get_prediction() const {
 		return xk; 

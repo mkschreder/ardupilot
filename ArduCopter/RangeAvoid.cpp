@@ -6,101 +6,13 @@
 
 #include "KalmanFilter.h"
 
-/*
-class SimpleFilter {
-public: 
-	SimpleFilter(); 
-	void update(float x, float dt); 
-	float get(); 
-private: 
-	// state transition matrix
-	math::Matrix<1, 1> F; 
-	// external forces matrix
-	math::Matrix<1, 1> B;
-	// input vector to state matrix 
-	math::Matrix<1, 1> H;
-	// kalman gain matrix
-	math::Matrix<1, 1> K; 
-	// prediction error matrix
-	math::Matrix<1, 1> P;  
-	// sensor noise
-	math::Matrix<1, 1> R; 
-	// process noise 
-	math::Matrix<1, 1> Q; 
-	
-	// filter state 
-	math::Vector<1> xk; 
-}; 
-
-SimpleFilter::SimpleFilter(){
-	// user input weight matrix
-	B = math::Matrix<1, 1>((const float[1][1]){
-		{1.0} 
-	}); 
-	// input vector covariance matrix 
-	H = math::Matrix<1, 1>((const float[1][1]){
-		{1.0}
-	}); 
-	// gain matrix (computed at each frame)
-	K = math::Matrix<1, 1>((const float[1][1]){
-		{1.0}
-	}); 
-	// prediction error matrix
-	P = math::Matrix<1, 1>((const float[1][1]){
-		{1.0}
-	}); 
-	// sensor noise
-	R = math::Matrix<1, 1>((const float[1][1]){
-		{0.8}
-	}); 
-	// process noise 
-	Q = math::Matrix<1, 1>((const float[1][1]){
-		{0.0}
-	}); 
-
-	xk = math::Vector<1>((const float[1]){0.0}); 
-}
-
-void SimpleFilter::update(float x, float dt){
-	math::Vector<1> zk;
-	zk(0) = x; 
-	math::Vector<1> uk; 
-
-	// update state transition matrix
-	float F_mat[1][1] = {
-		{1.0}
-	}; 
-	F = math::Matrix<1, 1>(F_mat); 
-
-	// predict
-	xk = F * xk + B * uk; 
-	P = F * P * F.transposed() + Q; 
-
-	// observe
-	math::Vector<1> innovation = zk - H * xk; 
-	math::Matrix<1, 1> innovation_cov = H * P * H.transposed() + R; 
-
-	// update
-	K = P * H.transposed() * innovation_cov.inversed(); 
-	xk = xk + K * innovation; 
-	P = P - K * H * P; 
-}
-
-float SimpleFilter::get(){
-	return xk(0); 
-}
-*/
-RangeAvoid::RangeAvoid(AP_AHRS *ahrs, AP_RangeFinder_6DOF *rangefinder, AP_InertialSensor *ins, OpticalFlow *optflow, AP_Baro *baro):
+RangeAvoid::RangeAvoid(RangerNav *nav):
 	_pitch_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
 	_roll_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
 	_pitch_center_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
 	_roll_center_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0)
 {
-	_ahrs = ahrs; 
-	_rangefinder = rangefinder; 
-	_ins = ins; 
-	_optflow = optflow; 
-	_baro = baro; 
+	_nav = nav;
 	_pitchComp = 0; 
 	_rollComp = 0; 
 	_desired_forward = _desired_right = 0; 
@@ -157,6 +69,7 @@ void RangeAvoid::reset(){
 
 extern const AP_HAL::HAL& hal;
 
+/*
 void RangeAvoid::update_flow_velocity(const Vector2f &flow_rate, float altitude, float dt){
 	float flow_forward = flow_rate.x * altitude; 
 	float flow_right = flow_rate.y * altitude; 
@@ -178,27 +91,6 @@ void RangeAvoid::update_flow_velocity(const Vector2f &flow_rate, float altitude,
 	// integrate flow velocity into a distance traveled (right now just a test)
 	_flow_distance_front += _flow_front_filtered * dt; 
 	_flow_distance_right += _flow_right_filtered * dt; 
-}
-
-void RangeAvoid::update_ekf(float dt){
-	// calculate acceleration in xy plane 
-	Vector3f accel = _ins->get_accel(); 
-	float accel_len = accel.length(); 
-	accel.x = (double)accel.x - (double)sin(_ahrs->pitch) * (double)accel_len; 
-	accel.y = (double)accel.y + (double)sin(_ahrs->roll) * (double)accel_len;
-
-	Vector3f center = _rangefinder->get_center_point_offset() * 0.01; 
-	//xf.update(center.x, (center.x - prev_center.x) / dt, accel.x, dt); 
-	float vel = _rangefinder->get_velocity_forward() * dt; 
-	xf.update(center.x, vel, -accel.x, dt); 
-	static KalmanFilter<1> sf; 
-	math::Vector<1> input; 
-	input(0) = xf.get_velocity(); 
-	sf.update(input, math::Vector<1>(), dt); 
-	_velocity = Vector3f(xf.get_velocity() - sf.get_prediction()(0), 0, 0); 
-	//static float prev_center = 0;  
-	//xf.update(center.x, (xf.get_center_offset() - prev_center) / dt, -accel.x, dt); 
-	//prev_center = xf.get_center_offset(); 
 }
 
 Vector3f RangeAvoid::get_center_offset(){
@@ -237,7 +129,7 @@ Vector2f RangeAvoid::get_wall_avoidance_velocity_compensation(){
 
 	return Vector2f(0, 0); 
 }
-
+*/
 void RangeAvoid::update(float dt){
 	if(is_zero(dt)) return; 
 
@@ -245,10 +137,19 @@ void RangeAvoid::update(float dt){
 	if(!is_zero(_desired_forward)) _flow_distance_front = 0; 
 	if(!is_zero(_desired_right)) _flow_distance_right = 0; 
 
-	update_ekf(dt); 
+	_nav->update(dt); 
+
+	Vector3f vel = _nav->get_velocity(); 
+
+	_pitch_pid.set_input_filter_all(_desired_forward + vel.x); 
+	_roll_pid.set_input_filter_all(_desired_right - vel.y); 
+
+	_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+	_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+
 
 	// only use flow if we have flow and at least baro or rangefinder altitude
-	if( 0 ) { //_optflow->healthy() && (_rangefinder->have_bottom() || _baro->healthy())) {
+	/*if( 0 ) { //_optflow->healthy() && (_rangefinder->have_bottom() || _baro->healthy())) {
 		// get the flow from the flow sensor
 		Vector2f flow_rate = _optflow->flowRate(); 
 		float altitude = 0; 
@@ -278,11 +179,11 @@ void RangeAvoid::update(float dt){
 		_pitch_center_pid.reset(); 
 		_roll_center_pid.reset(); 
 
-		/*hal.console->printf("WALL_AVOID OUT[ %f %f ], AVOID[ %f %f ], ALT[ %f ]\n", 
+		hal.console->printf("WALL_AVOID OUT[ %f %f ], AVOID[ %f %f ], ALT[ %f ]\n", 
 			(double)_output_pitch, (double)_output_roll, 
 			(double)wall_avoid.x, (double)wall_avoid.y, 
 			(double)altitude);   
-		*/
+		
 	} else { //if(_rangefinder->have_center_point()) {
 		// if we are flying and we have a center point offset but no velocity measurements from optical flow then we try to center the copter between the four walls	
 		Vector3f center = Vector3f(_velocity.x, 0, 0); //_rangefinder->get_center_point_offset() * 0.01; 
@@ -296,11 +197,10 @@ void RangeAvoid::update(float dt){
 		_output_pitch = -constrain_float(_pitch_center_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 		_output_roll = constrain_float(_roll_center_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 
-		/*hal.console->printf("CENTER OUT[ %f %f ], OFF[ %f %f ]\n", 
+		hal.console->printf("CENTER OUT[ %f %f ], OFF[ %f %f ]\n", 
 			(double)_output_pitch, (double)_output_roll, 
 			(double)center.x, (double)center.y);   
-			*/
-	} /* else {
+	}  else {
 		// otherwise just use pilot inputs scaled by P
 		_output_pitch = -_desired_forward * _pitch_pid.kP(); 
 		_output_roll = _desired_right * _roll_pid.kP(); 
@@ -321,7 +221,7 @@ void RangeAvoid::update(float dt){
 	//, flow_forward, flow_right, _flow_front_filtered, _flow_right_filtered, accel.x, accel.y, clear_bottom); 
 	//hal.console->printf("%f %f %f %f %f %f %f %f %f\n", flow_rate.x, flow_rate.y, flow_forward, flow_right, _flow_front_filtered, _flow_right_filtered, accel.x, accel.y, clear_bottom); 
 }
-
+/*
 RangeAvoid::RangeFilter::RangeFilter(){	
 	// user input weight matrix
 	B = math::Matrix<3, 3>((const float[3][3]){
@@ -396,7 +296,7 @@ float RangeAvoid::RangeFilter::get_center_offset() const {
 float RangeAvoid::RangeFilter::get_velocity() const {
 	return xk(1); 
 }
-
+*/
 float RangeAvoid::get_desired_pitch_angle(){
 	return _output_pitch;  
 }
