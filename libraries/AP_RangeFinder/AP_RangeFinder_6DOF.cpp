@@ -17,7 +17,7 @@ License: GPLv3
 #define DOF_SENSOR_TOP 5
 #define DOF_SENSOR_BOTTOM 4
 
-#define DOF_SENSOR_MAX_RANGE 400
+#define DOF_SENSOR_MAX_RANGE 3
 #define DOF_SENSOR_NO_READING -1
 
 void AP_RangeFinder_6DOF::init(){
@@ -80,7 +80,7 @@ void AP_RangeFinder_6DOF::update(float dt){
 								else
 									_rates[c] = 0; 
 								// TODO: figure out what to return when there is no valid reading? 
-								if(readings[c] == -1) _values[c] = 0; 
+								if(readings[c] == -1) _values[c] = DOF_SENSOR_MAX_RANGE; 
 								else _values[c] = (readings[c] / 58.0) * 0.01; 
 							}
 						}

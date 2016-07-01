@@ -35,6 +35,8 @@ public:
 
 	void get_rates_mps(float *front, float *back, float *right, float *left, float *bottom, float *top); 
 	void get_readings_m(float *front, float *back, float *right, float *left, float *bottom, float *top); 
+
+	long long last_update_millis(){ return _last_reading_time; }
 private: 
 	AP_HAL::UARTDriver *_port; 
 

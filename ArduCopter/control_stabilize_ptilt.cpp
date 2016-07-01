@@ -86,12 +86,12 @@ void Copter::stabilize_ptilt_run()
 	// INKO_TILT: here we have to feed pilot rc control 0 because we will then apply rc control to the servo directly. 
 	// INKO_TILT: in tilt mode, motor speeds are not effected by pilot pitch input. 
 
-	float rc_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.2; 
-	float rc_i = 0; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.008; 
-	float rc_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_p = 45; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.2; 
+	float rc_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_d = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 	
-	float rc_center_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.2; 
-	float rc_center_i = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.02; 
+	float rc_center_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.01; 
+	float rc_center_i = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
 	float rc_center_d = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.08; 
 
 	range_avoid.set_vel_kP(rc_p); 
@@ -206,7 +206,7 @@ void Copter::stabilize_ptilt_run()
 	// the cos here is always between 0.7 and 1.0 so we don't need to worry about div by zero
 
 	// disable throttle compensation for now because we are using altitude hold below
-	//float compPitch = constrain_int16(abs(ahrs.pitch_sensor * 0.01 + target_pitch * 0.01), 0, 45); 
+	//float compPitch = constrain_float(abs(ahrs.pitch_sensor * 0.01 + target_pitch * 0.01), 0, 45.0); 
 	//pilot_throttle_scaled = pilot_throttle_scaled / cos(radians(compPitch)); 
 	
 	// ===========================================================

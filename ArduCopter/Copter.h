@@ -563,6 +563,7 @@ private:
     AP_Param param_loader;
 
 	AP_RangeFinder_6DOF rangefinders; 
+	RangerNav ranger_nav; 
 	RangeAvoid range_avoid; 
 
 	#if FRAME_CONFIG == HELI_FRAME

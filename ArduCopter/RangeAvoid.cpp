@@ -1,3 +1,20 @@
+/*
+	Copyright (c) 2016 Martin Schröder <mkschreder.uk@gmail.com>
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "RangeAvoid.h"
 
 #define RANGE_MAX_RESPONSE 45.0
@@ -133,15 +150,16 @@ Vector2f RangeAvoid::get_wall_avoidance_velocity_compensation(){
 void RangeAvoid::update(float dt){
 	if(is_zero(dt)) return; 
 
-	// reset distance integral if pilot takes control 
-	if(!is_zero(_desired_forward)) _flow_distance_front = 0; 
-	if(!is_zero(_desired_right)) _flow_distance_right = 0; 
-
 	_nav->update(dt); 
 
 	Vector3f vel = _nav->get_velocity(); 
+	Vector3f pos = _nav->get_position(); 
 
-	_pitch_pid.set_input_filter_all(_desired_forward + vel.x); 
+	_pitch_center_pid.set_input_filter_all(_desired_forward - pos.x); 
+
+	float forward_vel = constrain_float(_pitch_center_pid.get_pid(), -1.0, 1.0); 
+
+	_pitch_pid.set_input_filter_all(forward_vel - vel.x); 
 	_roll_pid.set_input_filter_all(_desired_right - vel.y); 
 
 	_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
@@ -221,82 +239,7 @@ void RangeAvoid::update(float dt){
 	//, flow_forward, flow_right, _flow_front_filtered, _flow_right_filtered, accel.x, accel.y, clear_bottom); 
 	//hal.console->printf("%f %f %f %f %f %f %f %f %f\n", flow_rate.x, flow_rate.y, flow_forward, flow_right, _flow_front_filtered, _flow_right_filtered, accel.x, accel.y, clear_bottom); 
 }
-/*
-RangeAvoid::RangeFilter::RangeFilter(){	
-	// user input weight matrix
-	B = math::Matrix<3, 3>((const float[3][3]){
-		{1.0, 0.0, 0.0}, 
-		{0.0, 1.0, 0.0},
-		{0.0, 0.0, 1.0}
-	}); 
-	// input vector covariance matrix 
-	H = math::Matrix<3, 3>((const float[3][3]){
-		{1.0, 0.0, 0.0}, 
-		{0.0, 1.0, 0.0},
-		{0.0, 0.0, 1.0} 
-	}); 
-	// gain matrix (computed at each frame)
-	K = math::Matrix<3, 3>((const float[3][3]){
-		{1.0, 0.0, 0.0}, 
-		{0.0, 1.0, 0.0}, 
-		{0.0, 0.0, 1.0}
-	}); 
-	// prediction error matrix
-	P = math::Matrix<3, 3>((const float[3][3]){
-		{1.0, 0.0, 0.0}, 
-		{0.0, 1.0, 0.0},
-		{0.0, 0.0, 1.0}
-	}); 
-	// sensor noise
-	R = math::Matrix<3, 3>((const float[3][3]){
-		{0.2, 0.0, 0.0}, 
-		{0.0, 20.0, 0.0},
-		{0.0, 0.0, 0.2}
-	}); 
-	// process noise 
-	Q = math::Matrix<3, 3>((const float[3][3]){
-		{0.0001, 0.0, 0.0}, 
-		{0.0, 0.0001, 0.0},
-		{0.0, 0.0, 0.01}
-	}); 
 
-	xk = math::Vector<3>((const float[3]){0.0, 0.0, 0.0}); 
-}
-
-void RangeAvoid::RangeFilter::update(float pos, float vel, float acc, float dt){
-	math::Vector<3> zk(pos, vel, acc); 
-	math::Vector<3> uk(0.0, 0.0, 0.0); 
-
-	// update state transition matrix
-	float F_mat[3][3] = {
-		{1.0, dt,  0.0}, 
-		{0.0, 1.0, dt },
-		{0.0, 0.0, 1.0}
-	}; 
-	F = math::Matrix<3, 3>(F_mat); 
-
-	// predict
-	xk = F * xk + B * uk; 
-	P = F * P * F.transposed() + Q; 
-
-	// observe
-	math::Vector<3> innovation = zk - H * xk; 
-	math::Matrix<3, 3> innovation_cov = H * P * H.transposed() + R; 
-
-	// update
-	K = P * H.transposed() * innovation_cov.inversed(); 
-	xk = xk + K * innovation; 
-	P = P - K * H * P; 
-}
-
-float RangeAvoid::RangeFilter::get_center_offset() const {
-	return xk(0); 
-}
-
-float RangeAvoid::RangeFilter::get_velocity() const {
-	return xk(1); 
-}
-*/
 float RangeAvoid::get_desired_pitch_angle(){
 	return _output_pitch;  
 }

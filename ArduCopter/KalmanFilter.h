@@ -30,7 +30,7 @@ public:
 		R.identity(); 
 		Q.identity(); 
 	}
-	void update(const math::Vector<N> &zk, const math::Vector<N> &uk, float dt){
+	void update(const math::Vector<N> &zk, const math::Vector<N> &uk){
 		// predict
 		xk = F * xk + B * uk; 
 		P = F * P * F.transposed() + Q; 
