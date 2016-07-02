@@ -22,6 +22,7 @@ public:
 		for(unsigned int c = 0; c < N; c++){
 			_samples[c] = 0; 
 			_cf[c] = 1; 
+			_result = 0; 
 		}
 	}
 	float update(float val){

@@ -27,25 +27,11 @@ RangerNav::RangerNav(AP_AHRS *ahrs, AP_RangeFinder_6DOF *rangefinder, AP_Inertia
 	_optflow = optflow; 
 	_baro = baro; 
 
-	_kf_range_x.set_sensor_noise_covariance_matrix(math::Matrix<4, 4>((const float[4][4]){
-		{0.2, 0.0, 0.0, 0.0},
-		{0.0, 0.2, 0.0, 0.0},
-		{0.0, 0.0, 0.02, 0.0},
-		{0.0, 0.0, 0.0, 0.02}
-	})); 
-
-	_kf_range_x.set_process_noise_covariance_matrix(math::Matrix<4, 4>((const float[4][4]){
+	_kf_range_x.set_state_covariance_matrix(math::Matrix<4, 4>((const float[4][4]){
 		{0.01, 0.0, 0.0, 0.0},
 		{0.0, 0.01, 0.0, 0.0},
-		{0.0, 0.0, 0.01, 0.0},
-		{0.0, 0.0, 0.0, 0.01}
-	})); 
-
-	_kf_range_x.set_state_input_matrix(math::Matrix<4, 4>((const float[4][4]){
-		{1.0, 1.0, 0.0, 0.0},
-		{0.0, 1.0, 0.0, 0.0},
-		{0.0, -1.0, 1.0, 0.0},
-		{0.0, 1.0, 0.0, 1.0}
+		{0.0, 0.0, 0.001, 0.0},
+		{0.0, 0.0, 0.0, 0.001}
 	})); 
 }
 
@@ -57,18 +43,32 @@ void RangerNav::update(float dt){
 	accel.y = (double)accel.y + (double)sin(_ahrs->roll) * (double)accel_len;
 
 	// read rangefinder
-	float front, back, right, left, bottom, top; 
-	float dfront, dback, dright, dleft, dbottom, dtop; 
-	static float pdfront = 0, pdback = 0, pdright = 0, pdleft = 0, pdbottom = 0, pdtop = 0; 
 	_rangefinder->update(dt); 
-	
+
 	long long last_reading = _rangefinder->last_update_millis(); 
 	if(_last_range_reading != last_reading){
+		float front, back, right, left, bottom, top; 
+		float dfront, dback, dright, dleft, dbottom, dtop; 
+
 		_rangefinder->get_readings_m(&front, &back, &right, &left, &bottom, &top); 
 		_rangefinder->get_rates_mps(&dfront, &dback, &dright, &dleft, &dbottom, &dtop); 
 
+		front = _median_front.update(front); 
+		back = _median_back.update(back); 
+
+		// limit intput to 0.75m 
+		front = constrain_float(front, 0, 0.75); 
+		back = constrain_float(back, 0, 0.75); 
+
+		math::Vector<4> p = _kf_range_x.get_prediction(); 
+
 		Vector2f flow_rate = _optflow->flowRate(); 
 		float altitude = 0; 
+	
+		float __attribute__((unused)) rdt = 0.04; 
+		//if(_last_range_reading != 0){
+		//	rdt = (last_reading - _last_range_reading) * 0.001; 
+		//}
 
 		// update our barometer zero point while we have rangefinder, after that use only barometer altitude relative to the previously sensed ground. 
 		// Note: this may not work if suddenly ground gets closer, but is still out of rangefinder range. Then flow velocity will be slightly off. 
@@ -79,45 +79,72 @@ void RangerNav::update(float dt){
 			altitude = _baro->get_altitude() - _baro_zero_altitude; 
 		}
 
-		// limit intput to 0.75m 
-		front = constrain_float(front, 0, 0.75); 
-		back = constrain_float(back, 0, 0.75); 
-
-		math::Vector<4> p = _kf_range_x.get_prediction(); 
-
 		// update rangefinder filters
-		const float vfb[4] = {
-			// center point is recursively fed back as input to the filter for maximum smoothness
-			p(0), 
-			// velocity is inverted when fed into the filter because forward movement of the drone means decrease in distance to front wall
-			-_smooth_flow.update(_median_flow.update(flow_rate.x * altitude)), 
-			_smooth_front.update(_median_front.update(front)), 
-			_smooth_back.update(_median_back.update(back))
+		const float vfb[3] = {
+			// velocity is forward movement of the drone
+			_smooth_flow.update(_median_flow.update(flow_rate.x * altitude)),
+			front, 
+			back
 		}; 
-		math::Vector<4> fb(vfb); 
+		math::Vector<3> zk(vfb); 
 
-		float fmat[4][4] = {
-			{0.0, 1.0, 0.5, -0.5},
-			{0.0, 1.0, 0.0, 0.0},
-			{0.0, 0.0, 1.0, 0.0},
-			{0.0, 0.0, 0.0, 1.0}
+		if(_optflow->quality() > 128) {
+			const float F[4][4] = {
+				{0.0, -0.5 * rdt, 0.25, -0.25},
+				{0.0, 1.0, 0.0, 0.0},
+				{0.0, -rdt, 1.0, 0.0},
+				{0.0, rdt, 0.0, 1.0}
+			}; 
+			_kf_range_x.set_state_transition_matrix(math::Matrix<4,4>(F)); 
+			const float H[3][4] = {
+				{0.0, 1.0, 0.0, 0.0},
+				{0.0, -rdt, 1.0, 0.0},
+				{0.0, rdt, 0.0, 1.0}
+			}; 
+			_kf_range_x.set_state_input_matrix(math::Matrix<3, 4>(H)); 
+		} else {
+			const float F[4][4] = {
+				{0.0, 0.0, 0.5, -0.5},
+				{0.0, 1.0, 0.0, 0.0},
+				{0.0, 0.0, 1.0, 0.0},
+				{0.0, 0.0, 0.0, 1.0}
+			}; 
+			_kf_range_x.set_state_transition_matrix(math::Matrix<4,4>(F)); 
+			const float H[3][4] = {
+				{0.0, 0.0, 0.0, 0.0},
+				{0.0, 0.0, 1.0, 0.0},
+				{0.0, 0.0, 0.0, 1.0}
+			}; 
+			_kf_range_x.set_state_input_matrix(math::Matrix<3, 4>(H)); 
+		}
+		 
+		const float R[3][3] = {
+			{0.2, 0.0, 0.0},
+			{0.0, front / 4.0, 0.0},
+			{0.0, 0.0, back / 4.0}
 		}; 
+		_kf_range_x.set_sensor_covariance_matrix(math::Matrix<3, 3>(R)); 
 
-		_kf_range_x.set_state_transition_matrix(math::Matrix<4,4>(fmat)); 
-		_kf_range_x.update(fb, math::Vector<4>()); 
+		// store current reading as last before updating
+		_p_prev = p; 
+
+		_kf_range_x.update(zk, math::Vector<4>()); 
 
 		// calculate velocity of the drone from center point estimate
-		const math::Vector<4> &p_new = _kf_range_x.get_prediction(); 
-		if(_last_range_reading != 0){ // we have at least one previous reading
+		math::Vector<4> p_new = _kf_range_x.get_prediction(); 
+		if(!is_zero(rdt)){ // we have at least one previous reading
 			// velocity of the signal is inverted to get velocity of the drone
-			_velocity = -Vector3f((p_new(0) - p(0)) / ((last_reading - _last_range_reading) * 0.001), 0, 0); 
+			_velocity = -Vector3f(
+				_median_velocity.update((p_new(0) - p(0)) / rdt), 
+				0, 
+				0
+			); 
 		}
 
 		hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f\n",
-			front, back, flow_rate.x * altitude, _median_velocity.update(_velocity.x), p(0), p(1), p(2), p(3)); 
+			zk(0), zk(1), zk(2), _velocity.x, p(0), p(1), p(2), p(3)); 
 
 		_last_range_reading = last_reading; 
-
 	}
 	// update navigation filters
 }

@@ -39,10 +39,10 @@ private:
 	AP_InertialSensor *_ins; 
 	OpticalFlow *_optflow; 
 	
-	MedianFilter<7> _median_front, _median_back; 
+	MedianFilter<7> _median_front, _median_back;  
 	MedianFilter<3> _median_flow, _median_velocity; 
 	MeanFilter<3> _smooth_front, _smooth_back, _smooth_flow; 
-	KalmanFilter<4> _kf_range_x; 
+	KalmanFilter<3, 4> _kf_range_x; 
 
 	math::Vector<4> _p_prev; 
 	Vector3f _velocity; 
