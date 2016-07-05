@@ -86,17 +86,17 @@ void Copter::stabilize_ptilt_run()
 	// INKO_TILT: here we have to feed pilot rc control 0 because we will then apply rc control to the servo directly. 
 	// INKO_TILT: in tilt mode, motor speeds are not effected by pilot pitch input. 
 
-	float rc_p = 45; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.2; 
-	float rc_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
-	float rc_d = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_vel_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.08; 
+	float rc_vel_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_vel_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 	
-	float rc_center_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.01; 
-	float rc_center_i = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
+	float rc_center_p = 0.5; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.01; 
+	float rc_center_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
 	float rc_center_d = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.08; 
 
-	range_avoid.set_vel_kP(rc_p); 
-	range_avoid.set_vel_kI(rc_i); 
-	range_avoid.set_vel_kD(rc_d); 
+	range_avoid.set_vel_kP(rc_vel_p); 
+	range_avoid.set_vel_kI(rc_vel_i); 
+	range_avoid.set_vel_kD(rc_vel_d); 
 	
 	range_avoid.set_center_kP(rc_center_p); 
 	range_avoid.set_center_kI(rc_center_i); 
@@ -105,7 +105,7 @@ void Copter::stabilize_ptilt_run()
 	rangefinders.update(G_Dt); 
 
 	if(althold_state == AltHold_Flying){
-		range_avoid.input_desired_velocity_ms(-target_pitch / 4500.0, target_roll / 4500.0); 
+		range_avoid.input_desired_velocity_ms(-target_pitch / 4500.0 * 4, target_roll / 4500.0 * 4); 
 
 		range_avoid.update(G_Dt); 
 

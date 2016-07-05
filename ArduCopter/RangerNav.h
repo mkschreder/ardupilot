@@ -38,14 +38,49 @@ private:
 	AP_Baro *_baro; 
 	AP_InertialSensor *_ins; 
 	OpticalFlow *_optflow; 
+
+	// class that actually does the prediction for each axis
+	class PVPredictor {
+		friend class RangerNav; 
+		typedef enum {
+			HAVE_VELOCITY = (1 << 0), 
+			HAVE_RANGE_PLUS = (1 << 1), 
+			HAVE_RANGE_MINUS = (1 << 2)
+		} sensor_mask_t; 
+		PVPredictor(); 
+		// takes two rangefinder readings and velocity sensor readings into a prediction
+		void input(float velocity, float vel_quality, float range_pos, float range_neg, float dt); 	
+		float get_last_velocity_prediction(); 
+		float get_last_offset_prediction(); 
 	
+		math::Vector<3> get_last_input(){ return _zk; }
+		math::Vector<4> get_last_prediction(){ return _kf.get_prediction(); }
+	protected: 
+		MedianFilter<7> _median_pos, _median_neg;  
+		MedianFilter<3> _median_flow, _median_velocity; 
+		MeanFilter<3> _smooth_pos, _smooth_neg, _smooth_flow; 
+		LowPassFilterFloat _lp_velocity; 
+		KalmanFilter<3, 4> _kf; 
+		math::Vector<3> _zk; 
+	}; 
+
+	PVPredictor _pv_x, _pv_y; 
+/*
 	MedianFilter<7> _median_front, _median_back;  
 	MedianFilter<3> _median_flow, _median_velocity; 
 	MeanFilter<3> _smooth_front, _smooth_back, _smooth_flow; 
 	KalmanFilter<3, 4> _kf_range_x; 
 
 	math::Vector<4> _p_prev; 
-	Vector3f _velocity; 
+	LowPassFilterFloat _vel_x, _vel_y; 
+	*/
+	float calculate_altitude(float range_bottom, bool range_valid); 
+	Vector2f calculate_flow_ground_speed(Vector2f flow, float altitude); 
+
+	Vector2f _flow_ground_speed; 
+	MedianFilter<7> _median_bottom, _median_flow; 
+	MeanFilter<3> _smooth_bottom, _smooth_flow; 
+	float _altitude; 
 	float _baro_zero_altitude; 
 	long long _last_range_reading; 
 }; 

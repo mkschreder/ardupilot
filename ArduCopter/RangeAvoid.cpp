@@ -33,23 +33,23 @@ RangeAvoid::RangeAvoid(RangerNav *nav):
 	_pitchComp = 0; 
 	_rollComp = 0; 
 	_desired_forward = _desired_right = 0; 
-	_flow_front_filt.set_cutoff_frequency(5.0); 
-	_flow_right_filt.set_cutoff_frequency(5.0); 
+	//_flow_front_filt.set_cutoff_frequency(5.0); 
+	//_flow_right_filt.set_cutoff_frequency(5.0); 
 }
 
 void RangeAvoid::set_vel_kP(float kp){
 	_pitch_pid.kP(kp); 
-	_roll_pid.kP(kp); 
+	_roll_pid.kP(kp / 4.0); 
 }
 
 void RangeAvoid::set_vel_kI(float ki){
 	_pitch_pid.kI(ki); 
-	_roll_pid.kI(ki); 
+	_roll_pid.kI(ki / 4.0); 
 }
 
 void RangeAvoid::set_vel_kD(float kd){
 	_pitch_pid.kD(kd); 
-	_roll_pid.kD(kd); 
+	_roll_pid.kD(kd / 4.0); 
 }
 
 void RangeAvoid::set_center_kP(float kp){
@@ -156,88 +156,21 @@ void RangeAvoid::update(float dt){
 	Vector3f pos = _nav->get_position(); 
 
 	_pitch_center_pid.set_input_filter_all(_desired_forward - pos.x); 
+	_roll_center_pid.set_input_filter_all(_desired_right - pos.y); 
 
-	float forward_vel = constrain_float(_pitch_center_pid.get_pid(), -1.0, 1.0); 
+	Vector3f desired_vel = Vector3f(
+		constrain_float(_pitch_center_pid.get_pid(), -1.0, 1.0),
+		constrain_float(_roll_center_pid.get_pid(), -1.0, 1.0),
+		0
+	); 
 
-	_pitch_pid.set_input_filter_all(forward_vel - vel.x); 
-	_roll_pid.set_input_filter_all(_desired_right - vel.y); 
+	_pitch_pid.set_input_filter_all(desired_vel.x - vel.x); 
+	_roll_pid.set_input_filter_all(desired_vel.y - vel.y); 
 
 	_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 	_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-
-
-	// only use flow if we have flow and at least baro or rangefinder altitude
-	/*if( 0 ) { //_optflow->healthy() && (_rangefinder->have_bottom() || _baro->healthy())) {
-		// get the flow from the flow sensor
-		Vector2f flow_rate = _optflow->flowRate(); 
-		float altitude = 0; 
-
-		// update our barometer zero point while we have rangefinder, after that use only barometer altitude relative to the previously sensed ground. 
-		// Note: this may not work if suddenly ground gets closer, but is still out of rangefinder range. Then flow velocity will be slightly off. 
-		if(_rangefinder->have_bottom()) {
-			altitude = _rangefinder->get_bottom_clearance_cm() * 0.01; 
-			_baro_zero_altitude = _baro->get_altitude() - altitude; 
-		} else {
-			altitude = _baro->get_altitude() - _baro_zero_altitude; 
-		}
-
-		update_flow_velocity(flow_rate, altitude, dt); 
-
-		// add velocity based wall avoidance to the pilot inputs
-		//Vector2f wall_avoid = get_wall_avoidance_velocity_compensation(); 
-		//_desired_forward += wall_avoid.x; 
-		//_desired_right += wall_avoid.y; 
-
-		_pitch_pid.set_input_filter_all(_desired_forward - _flow_front_filtered); 
-		_roll_pid.set_input_filter_all(_desired_right - _flow_right_filtered); 
-
-		_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-		_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-
-		_pitch_center_pid.reset(); 
-		_roll_center_pid.reset(); 
-
-		hal.console->printf("WALL_AVOID OUT[ %f %f ], AVOID[ %f %f ], ALT[ %f ]\n", 
-			(double)_output_pitch, (double)_output_roll, 
-			(double)wall_avoid.x, (double)wall_avoid.y, 
-			(double)altitude);   
-		
-	} else { //if(_rangefinder->have_center_point()) {
-		// if we are flying and we have a center point offset but no velocity measurements from optical flow then we try to center the copter between the four walls	
-		Vector3f center = Vector3f(_velocity.x, 0, 0); //_rangefinder->get_center_point_offset() * 0.01; 
 	
-		center.x = constrain_float(center.x, -0.5, 0.5); 
-		center.y = constrain_float(center.y, -0.5, 0.5); 
-
-		_pitch_center_pid.set_input_filter_all(_desired_forward + center.x); 
-		_roll_center_pid.set_input_filter_all(_desired_right + center.y); 
-
-		_output_pitch = -constrain_float(_pitch_center_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-		_output_roll = constrain_float(_roll_center_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-
-		hal.console->printf("CENTER OUT[ %f %f ], OFF[ %f %f ]\n", 
-			(double)_output_pitch, (double)_output_roll, 
-			(double)center.x, (double)center.y);   
-	}  else {
-		// otherwise just use pilot inputs scaled by P
-		_output_pitch = -_desired_forward * _pitch_pid.kP(); 
-		_output_roll = _desired_right * _roll_pid.kP(); 
-
-		// reset pid controller integrals as well
-		_pitch_pid.reset(); 
-		_roll_pid.reset();
-
-		_pitch_center_pid.reset(); 
-		_roll_center_pid.reset(); 
-
-		//hal.console->printf("NO_VEL OUT[ %f %f ]\n", 
-	//		(double)_output_pitch, (double)_output_roll);   
-	}*/
-
-	//hal.console->printf("%f %f %f %f %f %f %f %f %f %f %f\n", clear_front, clear_back, _flow_distance_front, _flow_distance_right, clear_bottom, desired_forward, desired_right, 
-	//		_flow_front_filtered, _flow_right_filtered, _rangefinder->get_velocity_forward() / 100.0, _rangefinder->get_velocity_right() / 100.0); 
-	//, flow_forward, flow_right, _flow_front_filtered, _flow_right_filtered, accel.x, accel.y, clear_bottom); 
-	//hal.console->printf("%f %f %f %f %f %f %f %f %f\n", flow_rate.x, flow_rate.y, flow_forward, flow_right, _flow_front_filtered, _flow_right_filtered, accel.x, accel.y, clear_bottom); 
+	hal.console->printf("%f, %f, %f\n", (double)desired_vel.x, (double)_output_pitch, (double)_output_roll); 
 }
 
 float RangeAvoid::get_desired_pitch_angle(){

@@ -26,35 +26,6 @@
 
 class RangeAvoid {
 public: 
-	/*
-	class RangeFilter {
-	public: 
-		RangeFilter(); 	
-		void update(float pos, float vel, float acc, float dt); 
-		float get_center_offset() const;
-		float get_velocity() const; 
-	private: 
-		// state transition matrix
-		math::Matrix<3, 3> F; 
-		// external forces matrix
-		math::Matrix<3, 3> B;
-		// input vector to state matrix 
-		math::Matrix<3, 3> H;
-		// kalman gain matrix
-		math::Matrix<3, 3> K; 
-		// prediction error matrix
-		math::Matrix<3, 3> P;  
-		// sensor noise
-		math::Matrix<3, 3> R; 
-		// process noise 
-		math::Matrix<3, 3> Q; 
-		
-		// filter state 
-		math::Vector<3> xk; 
-	}; 
-
-	RangeAvoid(AP_AHRS *ahrs, AP_RangeFinder_6DOF *rangefinder, AP_InertialSensor *ins, OpticalFlow *optflow, AP_Baro *baro); 
-*/	
 	RangeAvoid(RangerNav *_nav); 
 
 	void set_vel_kP(float kp); 
@@ -86,7 +57,6 @@ private:
 
 	AC_PID _pitch_pid, _roll_pid; 
 	AC_PID _pitch_center_pid, _roll_center_pid; 
-	LowPassFilterFloat _flow_front_filt, _flow_right_filt; 
 	float _pitchComp, _rollComp; 
 	float _flow_front_filtered, _flow_right_filtered; 
 	float _flow_distance_front, _flow_distance_right; 
