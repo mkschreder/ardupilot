@@ -19,7 +19,7 @@
 
 const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 
-static AP_HAL::DebugConsole _debug_console; 
+AP_HAL::DebugConsole _debug_console; 
 
 /*
   constructor for main Copter class

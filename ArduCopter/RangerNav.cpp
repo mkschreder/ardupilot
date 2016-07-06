@@ -31,12 +31,13 @@ RangerNav::PVPredictor::PVPredictor(){
 }
 
 void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float range_pos, float range_neg, float dt){
-	_smooth_flow.update(flow_vel); 
+	//_smooth_flow.update(flow_vel); 
 	_median_pos.update(constrain_float(range_pos, 0, 0.75)); 
 	_median_neg.update(constrain_float(range_neg, 0, 0.75)); 
 
 	const float vfb[3] = {
-		_smooth_flow.get(),
+		//_smooth_flow.get(),
+		flow_vel, 
 		_median_pos.get(), 
 		_median_neg.get()
 	}; 
@@ -99,14 +100,15 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 	// calculate velocity of the drone from center point estimate
 	math::Vector<4> p = _kf.get_prediction(); 
 	if(!is_zero(dt)){
-		_lp_velocity.apply((p(0) - prev(0)) / dt, dt);  
-		//_lp_velocity.apply(_median_velocity.update((p(0) - prev(0)) / dt), dt);  
+		//_median_velocity.update((p(0) - prev(0)) / dt); 
+		//_lp_velocity.apply((p(0) - prev(0)) / dt, dt);  
+		_lp_velocity.apply(_median_velocity.update((p(0) - prev(0)) / dt), dt);  
 	}
 }
 
 float RangerNav::PVPredictor::get_last_velocity_prediction(){
-	//return -_lp_velocity.get(); 
-	return -_median_velocity.get(); 
+	return -_lp_velocity.get(); 
+	//return -_median_velocity.get(); 
 }
 
 float RangerNav::PVPredictor::get_last_offset_prediction(){
@@ -131,6 +133,7 @@ float RangerNav::calculate_altitude(float range_bottom, bool range_valid){
 	return _altitude; 
 }
 
+extern AP_HAL::DebugConsole _debug_console; 
 void RangerNav::update(float dt){
 	// calculate acceleration in xy plane 
 	Vector3f accel = _ins->get_accel(); 
@@ -144,9 +147,9 @@ void RangerNav::update(float dt){
 	long long last_reading = _rangefinder->last_update_millis(); 
 	if(_last_range_reading != last_reading){	
 		float __attribute__((unused)) rdt = 0.04; 
-		//if(_last_range_reading != 0){
-		//	rdt = (last_reading - _last_range_reading) * 0.001; 
-		//}
+		/*if(_last_range_reading != 0){
+			rdt = (last_reading - _last_range_reading) * 0.001; 
+		}*/
 
 		float front, back, right, left, bottom, top; 
 
@@ -163,8 +166,8 @@ void RangerNav::update(float dt){
 		math::Vector<3> zk = _pv_x.get_last_input(); 	
 		math::Vector<4> p = _pv_x.get_last_prediction(); 
 		
-		hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f, ",
-			zk(0), zk(1), zk(2), _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
+		//_debug_console.printf("%f, %f, %f, %f, %f, %f, %f, %f, %f, ",
+		//	vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
 
 		_last_range_reading = last_reading; 
 	}

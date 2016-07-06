@@ -87,12 +87,14 @@ void Copter::stabilize_ptilt_run()
 	// INKO_TILT: in tilt mode, motor speeds are not effected by pilot pitch input. 
 
 	float rc_vel_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.08; 
-	float rc_vel_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
-	float rc_vel_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_vel_i = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_vel_d = 3.73; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 	
 	float rc_center_p = 0.5; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.01; 
 	float rc_center_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
 	float rc_center_d = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.08; 
+
+	//hal.console->printf("%f, %f, %f\n", rc_vel_p, rc_vel_i, rc_vel_d); 
 
 	range_avoid.set_vel_kP(rc_vel_p); 
 	range_avoid.set_vel_kI(rc_vel_i); 
