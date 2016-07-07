@@ -39,17 +39,17 @@ RangeAvoid::RangeAvoid(RangerNav *nav):
 
 void RangeAvoid::set_vel_kP(float kp){
 	_pitch_pid.kP(kp); 
-	_roll_pid.kP(kp * 0.7); 
+	_roll_pid.kP(kp); 
 }
 
 void RangeAvoid::set_vel_kI(float ki){
 	_pitch_pid.kI(ki); 
-	_roll_pid.kI(ki * 0.7); 
+	_roll_pid.kI(ki); 
 }
 
 void RangeAvoid::set_vel_kD(float kd){
 	_pitch_pid.kD(kd); 
-	_roll_pid.kD(kd * 0.7); 
+	_roll_pid.kD(kd); 
 }
 
 void RangeAvoid::set_center_kP(float kp){
@@ -95,8 +95,8 @@ void RangeAvoid::update(float dt){
 	Vector3f vel = _nav->get_velocity(); 
 	Vector3f pos = _nav->get_position(); 
 
-	_pitch_center_pid.set_input_filter_all(_desired_forward - pos.x); 
-	_roll_center_pid.set_input_filter_all(_desired_right - pos.y); 
+	_pitch_center_pid.set_input_filter_all(-pos.x); 
+	_roll_center_pid.set_input_filter_all(-pos.y); 
 /*
 	Vector3f desired_vel = Vector3f(
 		constrain_float(_pitch_center_pid.get_pid(), -1.0, 1.0),
@@ -105,13 +105,14 @@ void RangeAvoid::update(float dt){
 	); */
 
 	//_pitch_pid.set_input_filter_all(desired_vel.x - vel.x); 
-	_pitch_pid.set_input_filter_all(_desired_forward - vel.x); 
-	_roll_pid.set_input_filter_all(_desired_right - vel.y); 
+	_pitch_pid.set_input_filter_all(_desired_forward - _pitch_center_pid.get_pid() - vel.x); 
+	_roll_pid.set_input_filter_all(_desired_right - _roll_center_pid.get_pid() - vel.y); 
 	//_roll_pid.set_input_filter_all(desired_vel.y - vel.y); 
 
 	_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 	_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-	
+
+	//hal.console->printf("%f %f %f %f %f %f\n", _desired_forward, _desired_right, _pitch_center_pid.get_pid(), _roll_center_pid.get_pid(), _output_pitch, _output_roll); 
 	//_debug_console.printf("%f, %f\n", (double)_output_pitch, (double)_output_roll); 
 }
 

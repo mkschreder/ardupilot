@@ -112,7 +112,8 @@ float RangerNav::PVPredictor::get_last_velocity_prediction(){
 }
 
 float RangerNav::PVPredictor::get_last_offset_prediction(){
-	return -_kf.get_prediction()(0); 
+	return _smooth_pos.update((_zk(1) - _zk(2)) / 2); 
+	//return -_kf.get_prediction()(0); 
 }
 
 RangerNav::RangerNav(AP_AHRS *ahrs, AP_RangeFinder_6DOF *rangefinder, AP_InertialSensor *ins, OpticalFlow *optflow, AP_Baro *baro){
@@ -166,8 +167,8 @@ void RangerNav::update(float dt){
 		math::Vector<3> zk = _pv_x.get_last_input(); 	
 		math::Vector<4> p = _pv_x.get_last_prediction(); 
 		
-		//_debug_console.printf("%f, %f, %f, %f, %f, %f, %f, %f, %f, ",
-		//	vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
+		hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
+			vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
 
 		_last_range_reading = last_reading; 
 	}
