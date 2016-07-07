@@ -60,6 +60,7 @@ private:
 		MedianFilter<3> _median_flow, _median_velocity; 
 		MeanFilter<3> _smooth_pos, _smooth_neg, _smooth_flow; 
 		LowPassFilterFloat _lp_velocity; 
+		float _velocity; 
 		KalmanFilter<3, 4> _kf; 
 		math::Vector<3> _zk; 
 	}; 

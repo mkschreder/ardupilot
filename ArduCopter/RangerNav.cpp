@@ -24,8 +24,8 @@ RangerNav::PVPredictor::PVPredictor(){
 	_kf.set_state_covariance_matrix(math::Matrix<4, 4>((const float[4][4]){
 		{0.01, 0.0, 0.0, 0.0},
 		{0.0, 0.01, 0.0, 0.0},
-		{0.0, 0.0, 0.001, 0.0},
-		{0.0, 0.0, 0.0, 0.001}
+		{0.0, 0.0, 0.01, 0.0},
+		{0.0, 0.0, 0.0, 0.01}
 	})); 
 	_lp_velocity.set_cutoff_frequency(1.0); 
 }
@@ -62,7 +62,7 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 		// when quality = 255 -> 0 noise, when quality 0 -> 0.4 noise. 
 		// trust flow more if quality is better
 		// trust rangefinders less the further distance they report
-		float flow_noise = 0.4 * constrain_float(1.0 - (flow_quality), 0, 1.0); 
+		float flow_noise = 0.0; //0.4 * constrain_float(1.0 - (flow_quality), 0, 1.0); 
 		const float R[3][3] = {
 			{flow_noise, 0.0, 0.0},
 			{0.0, zk(1) * 2.0, 0.0},
@@ -100,14 +100,15 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 	// calculate velocity of the drone from center point estimate
 	math::Vector<4> p = _kf.get_prediction(); 
 	if(!is_zero(dt)){
+		_velocity = (p(0) - prev(0)) / dt; 
 		//_median_velocity.update((p(0) - prev(0)) / dt); 
 		//_lp_velocity.apply((p(0) - prev(0)) / dt, dt);  
-		_lp_velocity.apply(_median_velocity.update((p(0) - prev(0)) / dt), dt);  
+		//_lp_velocity.apply(_median_velocity.update((p(0) - prev(0)) / dt), dt);  
 	}
 }
 
 float RangerNav::PVPredictor::get_last_velocity_prediction(){
-	return -_lp_velocity.get(); 
+	return -_velocity; 
 	//return -_median_velocity.get(); 
 }
 
@@ -161,14 +162,18 @@ void RangerNav::update(float dt){
 
 		float flow_quality = (float)_optflow->quality() / 255.0; 
 
+		front = 0.75; 
+		back = 0.75; 
+		right = 0.75; 
+		left = 0.75;
 		_pv_x.input(vel.x, flow_quality, front, back, rdt); 
 		_pv_y.input(vel.y, flow_quality, right, left, rdt); 
 	
 		math::Vector<3> zk = _pv_x.get_last_input(); 	
 		math::Vector<4> p = _pv_x.get_last_prediction(); 
 		
-		hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
-			vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
+		//hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
+		//	vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
 
 		_last_range_reading = last_reading; 
 	}

@@ -88,7 +88,7 @@ void Copter::stabilize_ptilt_run()
 
 	float rc_vel_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.08; // 6.32
 	float rc_vel_i = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 5.92 
-	float rc_vel_d = 2.0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 3.73 
+	float rc_vel_d = 3.73; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 3.73 
 	
 	float rc_center_p = 0; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.02; 
 	float rc_center_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
