@@ -95,22 +95,42 @@ void RangeAvoid::update(float dt){
 	Vector3f vel = _nav->get_velocity(); 
 	Vector3f pos = _nav->get_position(); 
 
-	_pitch_center_pid.set_input_filter_all(-pos.x); 
-	_roll_center_pid.set_input_filter_all(-pos.y); 
-/*
-	Vector3f desired_vel = Vector3f(
-		constrain_float(_pitch_center_pid.get_pid(), -1.0, 1.0),
-		constrain_float(_roll_center_pid.get_pid(), -1.0, 1.0),
-		0
-	); */
+	static Vector3f target_pos = Vector3f(0, 0, 0); 
+
+	if(!_nav->have_position()) target_pos = pos; 
+
+	if(!is_zero(_desired_forward)){
+		_pitch_center_pid.set_input_filter_all(_desired_forward * 0.2); 
+		_pitch_center_pid.reset_I(); 
+		target_pos.x = pos.x; 
+	} else {
+		_pitch_center_pid.set_input_filter_all(target_pos.x - pos.x); 
+	}	
+
+	if(!is_zero(_desired_right)){
+		_roll_center_pid.set_input_filter_all(_desired_right * 0.2); 
+		_roll_center_pid.reset_I(); 
+		target_pos.y = pos.y; 
+	} else {
+		//_roll_center_pid.set_input_filter_all(0); 
+		_roll_center_pid.set_input_filter_all(target_pos.y - pos.y); 
+	}
+
+	//_pitch_center_pid.set_input_filter_all(target_pos.x - pos.x); 
+	//_roll_center_pid.set_input_filter_all(target_pos.y - pos.y); 
 
 	//_pitch_pid.set_input_filter_all(desired_vel.x - vel.x); 
 	_pitch_pid.set_input_filter_all(_desired_forward - _pitch_center_pid.get_pid() - vel.x); 
 	_roll_pid.set_input_filter_all(_desired_right - _roll_center_pid.get_pid() - vel.y); 
 	//_roll_pid.set_input_filter_all(desired_vel.y - vel.y); 
 
-	_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-	_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+	_output_pitch = -constrain_float(_pitch_center_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+	_output_roll = constrain_float(_roll_center_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+
+	//_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+	//_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+	
+	hal.console->printf("%f %f -> %f %f - e - %f %f -> %f %f\n", _desired_forward, _desired_right, pos.x, pos.y, target_pos.x - pos.x, target_pos.y - pos.y, _output_pitch, _output_roll);  
 
 	//hal.console->printf("%f %f %f %f %f %f\n", _desired_forward, _desired_right, _pitch_center_pid.get_pid(), _roll_center_pid.get_pid(), _output_pitch, _output_roll); 
 	//_debug_console.printf("%f, %f\n", (double)_output_pitch, (double)_output_roll); 

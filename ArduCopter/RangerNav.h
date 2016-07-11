@@ -32,6 +32,8 @@ public:
 	void update(float dt); 	
 	Vector3f get_velocity(); 
 	Vector3f get_position(); 
+
+	bool have_position(); 
 private: 
 	AP_RangeFinder_6DOF *_rangefinder; 
 	AP_AHRS *_ahrs; 
@@ -52,7 +54,7 @@ private:
 		void input(float velocity, float vel_quality, float range_pos, float range_neg, float dt); 	
 		float get_last_velocity_prediction(); 
 		float get_last_offset_prediction(); 
-	
+
 		math::Vector<3> get_last_input(){ return _zk; }
 		math::Vector<4> get_last_prediction(){ return _kf.get_prediction(); }
 	protected: 
@@ -61,6 +63,7 @@ private:
 		MeanFilter<3> _smooth_pos, _smooth_neg, _smooth_flow; 
 		LowPassFilterFloat _lp_velocity; 
 		float _velocity; 
+		float _offset; 
 		KalmanFilter<3, 4> _kf; 
 		math::Vector<3> _zk; 
 	}; 

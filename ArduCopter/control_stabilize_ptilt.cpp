@@ -27,6 +27,8 @@ bool Copter::stabilize_ptilt_init(bool ignore_checks){
 	return true; 
 }
 
+FILE *logfile = 0; 
+
 // stabilize_ptilt_run - runs the main stabilize controller
 // pitch is not sent to the pid, rather it is later calcualted by the mixer from rc input and sent directly to the servo
 // roll and yaw compensation however needs to be done here. 
@@ -85,14 +87,19 @@ void Copter::stabilize_ptilt_run()
 	//Vector2f flow_rate = optflow.flowRate(); 
 	// INKO_TILT: here we have to feed pilot rc control 0 because we will then apply rc control to the servo directly. 
 	// INKO_TILT: in tilt mode, motor speeds are not effected by pilot pitch input. 
+	float rc_4 = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.001; 
+	float rc_5 = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.001; 
+
+	float ku = 20 + rc_4 * 40;  
+	float tu = 5 + rc_5 * 10; 
 
 	float rc_vel_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.08; // 6.32
-	float rc_vel_i = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 5.92 
-	float rc_vel_d = 3.73; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 3.73 
+	float rc_vel_i = 0;//constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 5.92 
+	float rc_vel_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 3.73 
 	
-	float rc_center_p = 0; //constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.02; 
-	float rc_center_i = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
-	float rc_center_d = 0; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+	float rc_center_p = 0.6 * ku; 
+	float rc_center_i = (1.2 * ku) / tu; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
+	float rc_center_d = (0.6 * ku * tu) / 8; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 
 	//hal.console->printf("%f, %f, %f\n", rc_center_p, rc_center_i, rc_center_d); 
 
@@ -107,6 +114,10 @@ void Copter::stabilize_ptilt_run()
 	rangefinders.update(G_Dt); 
 
 	if(althold_state == AltHold_Flying){
+		if(!logfile) {
+			logfile = fopen("/fs/microsd/log.hex", "a"); 
+			if(logfile) printf("Opened logfile\n"); 
+		}
 		range_avoid.input_desired_velocity_ms(-target_pitch / 4500.0 * 4, target_roll / 4500.0 * 4); 
 
 		range_avoid.update(G_Dt); 
@@ -114,6 +125,11 @@ void Copter::stabilize_ptilt_run()
 		target_pitch = range_avoid.get_desired_pitch_angle() * 100.0f; 
 		target_roll = range_avoid.get_desired_roll_angle() * 100.0f; 
 	} else {
+		if(logfile){
+			fclose(logfile); 
+			printf("Closed logfile\n"); 
+			logfile = 0; 
+		}
 		range_avoid.reset(); 
 	}
 /*	

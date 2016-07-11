@@ -24,10 +24,11 @@ RangerNav::PVPredictor::PVPredictor(){
 	_kf.set_state_covariance_matrix(math::Matrix<4, 4>((const float[4][4]){
 		{0.01, 0.0, 0.0, 0.0},
 		{0.0, 0.01, 0.0, 0.0},
-		{0.0, 0.0, 0.01, 0.0},
-		{0.0, 0.0, 0.0, 0.01}
+		{0.0, 0.0, 0.001, 0.0},
+		{0.0, 0.0, 0.0, 0.001}
 	})); 
 	_lp_velocity.set_cutoff_frequency(1.0); 
+	_velocity = 0; 
 }
 
 void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float range_pos, float range_neg, float dt){
@@ -101,20 +102,23 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 	math::Vector<4> p = _kf.get_prediction(); 
 	if(!is_zero(dt)){
 		_velocity = (p(0) - prev(0)) / dt; 
+		//_velocity = _lp_velocity.apply(p(0) * 2 + ((p(0) - prev(0)) / dt), dt);  
 		//_median_velocity.update((p(0) - prev(0)) / dt); 
 		//_lp_velocity.apply((p(0) - prev(0)) / dt, dt);  
 		//_lp_velocity.apply(_median_velocity.update((p(0) - prev(0)) / dt), dt);  
 	}
+	
+	_offset += flow_vel * dt;  
 }
 
 float RangerNav::PVPredictor::get_last_velocity_prediction(){
 	return -_velocity; 
-	//return -_median_velocity.get(); 
 }
 
 float RangerNav::PVPredictor::get_last_offset_prediction(){
-	return _smooth_pos.update((_zk(1) - _zk(2)) / 2); 
+	//return _smooth_pos.update((_zk(1) - _zk(2)) / 2); 
 	//return -_kf.get_prediction()(0); 
+	return _offset; 
 }
 
 RangerNav::RangerNav(AP_AHRS *ahrs, AP_RangeFinder_6DOF *rangefinder, AP_InertialSensor *ins, OpticalFlow *optflow, AP_Baro *baro){
@@ -136,12 +140,26 @@ float RangerNav::calculate_altitude(float range_bottom, bool range_valid){
 }
 
 extern AP_HAL::DebugConsole _debug_console; 
+extern FILE *logfile; 
+
 void RangerNav::update(float dt){
 	// calculate acceleration in xy plane 
 	Vector3f accel = _ins->get_accel(); 
-	float accel_len = accel.length(); 
-	accel.x = (double)accel.x - (double)sin(_ahrs->pitch) * (double)accel_len; 
-	accel.y = (double)accel.y + (double)sin(_ahrs->roll) * (double)accel_len;
+	Vector3f gyro = _ins->get_gyro(); 
+	//Vector3f mag = _ins->get_mag(); 
+	//float accel_len = accel.length(); 
+	//accel.x = (double)accel.x - (double)sin(_ahrs->pitch) * (double)accel_len; 
+	//accel.y = (double)accel.y + (double)sin(_ahrs->roll) * (double)accel_len;
+
+	/*
+	// sample code to compute linear acceleration
+	// Something seems off 
+	math::Matrix<3, 3> R; 
+	R.from_euler(-_ahrs->roll, _ahrs->pitch, _ahrs->yaw); 
+	math::Vector<3> g(0, 0, -9.82); 
+	math::Vector<3> a = R.inversed() * math::Vector<3>(accel.y, accel.x, accel.z); 
+	hal.console->printf("RPY: %f %f %f, A: %f %f %f, ACC: %f %f %f\n", _ahrs->roll, _ahrs->pitch, _ahrs->yaw, a(0), a(1), a(2), accel.x, accel.y, accel.z); 
+	*/
 
 	// read rangefinder
 	_rangefinder->update(dt); 
@@ -158,26 +176,50 @@ void RangerNav::update(float dt){
 		_rangefinder->get_readings_m(&front, &back, &right, &left, &bottom, &top); 
 
 		float altitude = calculate_altitude(bottom, _rangefinder->have_bottom()); 
-		Vector2f vel = _optflow->flowRate() * altitude; 
+		Vector2f flow = _optflow->flowRate(); 
+		Vector2f vel = flow * altitude; 
 
 		float flow_quality = (float)_optflow->quality() / 255.0; 
 
-		front = 0.75; 
-		back = 0.75; 
-		right = 0.75; 
-		left = 0.75;
 		_pv_x.input(vel.x, flow_quality, front, back, rdt); 
 		_pv_y.input(vel.y, flow_quality, right, left, rdt); 
 	
 		math::Vector<3> zk = _pv_x.get_last_input(); 	
 		math::Vector<4> p = _pv_x.get_last_prediction(); 
-		
-		//hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
-		//	vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
+	
+		struct frame {
+			float fx, front, back, vx, px; 
+			float fy, right, left, vy, py; 
+			float bottom; 
+			float altitude; 
+			float ax, ay, az; 
+			float gx, gy, gz; 
+		}; 
+		struct frame f; 
+		f.fx = flow.x; f.front = front; f.back = back; 
+		f.vx = _pv_x.get_last_velocity_prediction(); f.px = _pv_x.get_last_offset_prediction(); 
+		f.fy = flow.y; f.right = right; f.left = left; 
+		f.vy = _pv_y.get_last_velocity_prediction(); f.py = _pv_y.get_last_offset_prediction(); 
+		f.ax = accel.x; f.ay = accel.y; f.az = accel.z; 
+		f.gx = gyro.x; f.gy = gyro.y; f.gz = gyro.z; 
+		f.bottom = bottom; 
+		f.altitude = altitude; 
+		char *data = (char*)&f; 
+		for(size_t c = 0; c < sizeof(f); c++){
+			fprintf(logfile, "%02x", (unsigned int)*(data+c)); 
+		}
+		fprintf(logfile, "\n"); 
 
+		/*hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
+			vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
+		*/
 		_last_range_reading = last_reading; 
 	}
 	// update navigation filters
+}
+
+bool RangerNav::have_position(){
+	return _optflow->quality() > 0; 
 }
 
 Vector3f RangerNav::get_velocity() {
