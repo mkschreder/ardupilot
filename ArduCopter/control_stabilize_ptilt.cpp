@@ -90,8 +90,8 @@ void Copter::stabilize_ptilt_run()
 	float rc_4 = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.001; 
 	float rc_5 = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.001; 
 
-	float ku = 20 + rc_4 * 40;  
-	float tu = 5 + rc_5 * 10; 
+	float ku = 10 + rc_4 * 35;  
+	float tu = 5 + rc_5 * 15; 
 
 	float rc_vel_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.08; // 6.32
 	float rc_vel_i = 0;//constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 5.92 
@@ -101,7 +101,7 @@ void Copter::stabilize_ptilt_run()
 	float rc_center_i = (1.2 * ku) / tu; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
 	float rc_center_d = (0.6 * ku * tu) / 8; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 
-	//hal.console->printf("%f, %f, %f\n", rc_center_p, rc_center_i, rc_center_d); 
+	hal.console->printf("%f, %f, %f, %f, %f\n", ku, tu, rc_center_p, rc_center_i, rc_center_d); 
 
 	range_avoid.set_vel_kP(rc_vel_p); 
 	range_avoid.set_vel_kI(rc_vel_i); 
@@ -118,7 +118,7 @@ void Copter::stabilize_ptilt_run()
 			logfile = fopen("/fs/microsd/log.hex", "a"); 
 			if(logfile) printf("Opened logfile\n"); 
 		}
-		range_avoid.input_desired_velocity_ms(-target_pitch / 4500.0 * 4, target_roll / 4500.0 * 4); 
+		range_avoid.input_desired_velocity_ms(-target_pitch / 4500.0, target_roll / 4500.0); 
 
 		range_avoid.update(G_Dt); 
 
