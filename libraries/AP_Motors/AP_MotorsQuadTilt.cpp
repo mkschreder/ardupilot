@@ -53,22 +53,23 @@ const AP_Param::GroupInfo AP_MotorsQuadTilt::var_info[] = {
 void AP_MotorsQuadTilt::setup_motors(){
     // call parent
     AP_MotorsQuad::setup_motors();
-
-	_motor_tilt = 0; 
 }
 
-void AP_MotorsQuadTilt::output_to_servos(){
-	// output tilt servo here. The rest of the motors are controlled as normal using the default mixer! 
-	//float pilot_pitch = (_pitch_radio_passthrough / 4.5f); // note that for some reason it is scaled into 4.5 instead of 45 (higher code converts centidegrees by dividing by 1000!) 
+void AP_MotorsQuadTilt::output(){
 	float servo_scale = (constrain_float(_servo_travel, 0, 90) / 90.0f); // 0.0 - 1.0. 
-	uint16_t servo_pwm = constrain_int16(1500 + 500 * constrain_float(_motor_tilt, -90, 90) / 90.0, 1000, 2000); 
-	//hal.console->printf("tilt deg: %f tilt chan: %d tilt pwm: %d\n", (double)_motor_tilt, (int)_servo_channel, servo_pwm); 
-	//hal.console->printf("servo: %f\n", (double)_motor_tilt); 
+	uint16_t servo_pwm = constrain_int16(1500 + 500 * constrain_float(_tilt_pitch, -90, 90) / 90.0, 1000, 2000); 
+
 	if(_servo_on && _servo_channel > 0){
 		rc_write(_servo_channel - 1, servo_pwm); 
 	} else {
 		// center servo
 		rc_write(_servo_channel - 1, 1500); 
 	}
+
+	AP_MotorsQuad::output(); 
+}
+
+void AP_MotorsQuadTilt::output_to_servos(){
+	// no longer used
 }
 	

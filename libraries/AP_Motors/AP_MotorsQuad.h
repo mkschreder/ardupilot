@@ -20,7 +20,7 @@ public:
 
     // setup_motors - configures the motors for a quad
     virtual void        setup_motors();
-	
+	virtual void 		output(); 	
 	virtual void		output_to_motors(){ AP_MotorsMatrix::output_to_motors(); }; 
 protected:
 

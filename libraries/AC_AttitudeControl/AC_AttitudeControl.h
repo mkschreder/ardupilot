@@ -57,7 +57,8 @@ public:
         _throttle_in_filt(AC_ATTITUDE_CONTROL_ALTHOLD_LEANANGLE_FILT_HZ),
         _ahrs(ahrs),
         _aparm(aparm),
-        _motors(motors)
+        _motors(motors),
+		_motor_tilt_pitch_ang(0)
         {
             AP_Param::setup_object_defaults(this, var_info);
         }
@@ -355,6 +356,10 @@ protected:
     AP_Motors&          _motors;
 
 private:
+	// motor tilt
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	float _motor_tilt_pitch_ang; 
+#endif
     /*
       state of control monitoring
     */

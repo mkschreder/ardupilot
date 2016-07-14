@@ -20,18 +20,18 @@ public:
 	// outputs values to servos
 	virtual void 		output_to_servos(); 
 
+	virtual void		output(); 
+
 	// params
 	static const struct AP_Param::GroupInfo	var_info[]; 
 
-	void 	set_motor_tilt(float tilt_deg) { _motor_tilt = tilt_deg; }
+	//void 	set_motor_tilt(float tilt_deg) { _motor_tilt = tilt_deg; }
 protected:
 	
 private: 
 	AP_Int8 _servo_on; 
 	AP_Int8 _servo_channel; 
 	AP_Int16 _servo_travel; 
-
-	float _motor_tilt; 
 };
 
 

@@ -117,6 +117,12 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw_smooth(floa
     float euler_pitch_angle_rad = radians(euler_pitch_angle_cd*0.01f);
     float euler_yaw_rate_rads = radians(euler_yaw_rate_cds*0.01f);
 
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
+	euler_pitch_angle_rad = 0; 
+#endif
+
     // Sanity check smoothing gain
     smoothing_gain = constrain_float(smoothing_gain,1.0f,50.0f);
 
@@ -194,6 +200,12 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
     float euler_pitch_angle_rad = radians(euler_pitch_angle_cd*0.01f);
     float euler_yaw_rate_rads = radians(euler_yaw_rate_cds*0.01f);
 
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
+	euler_pitch_angle_rad = 0; 
+#endif
+
     // Add roll trim to compensate tail rotor thrust in heli (will return zero on multirotors)
     euler_roll_angle_rad += get_roll_trim_rad();
 
@@ -234,6 +246,12 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle
     float euler_pitch_angle_rad = radians(euler_pitch_angle_cd*0.01f);
     float euler_yaw_angle_rad = radians(euler_yaw_angle_cd*0.01f);
 
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
+	euler_pitch_angle_rad = 0; 
+#endif
+
     // Add roll trim to compensate tail rotor thrust in heli (will return zero on multirotors)
     euler_roll_angle_rad += get_roll_trim_rad();
 
@@ -264,6 +282,13 @@ void AC_AttitudeControl::input_euler_rate_roll_pitch_yaw(float euler_roll_rate_c
     float euler_roll_rate_rads = radians(euler_roll_rate_cds*0.01f);
     float euler_pitch_rate_rads = radians(euler_pitch_rate_cds*0.01f);
     float euler_yaw_rate_rads = radians(euler_yaw_rate_cds*0.01f);
+
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	// TODO: revisit this because it is rate control here. 
+	_motor_tilt_pitch_ang = euler_pitch_rate_cds * 0.01f; 
+	euler_pitch_rate_rads = 0; 
+#endif
 
     // Compute acceleration-limited euler roll rate
     if (get_accel_roll_max_radss() > 0.0f) {
@@ -312,6 +337,12 @@ void AC_AttitudeControl::input_rate_bf_roll_pitch_yaw(float roll_rate_bf_cds, fl
     float pitch_rate_bf_rads = radians(pitch_rate_bf_cds*0.01f);
     float yaw_rate_bf_rads = radians(yaw_rate_bf_cds*0.01f);
 
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	_motor_tilt_pitch_ang = pitch_rate_bf_cds * 0.01f; 
+	pitch_rate_bf_rads = 0; 
+#endif
+
     // Compute acceleration-limited body-frame roll rate
     if (get_accel_roll_max_radss() > 0.0f) {
         float rate_change_limit_rads = get_accel_roll_max_radss() * _dt;
@@ -353,6 +384,8 @@ void AC_AttitudeControl::input_rate_bf_roll_pitch_yaw(float roll_rate_bf_cds, fl
 
 void AC_AttitudeControl::input_att_quat_bf_ang_vel(const Quaternion& att_target_quat, const Vector3f& att_target_ang_vel_rads)
 {
+	// TODO: does this need to be modified for tilt frames? 
+
     // Call attitude controller
     attitude_controller_run_quat(att_target_quat, att_target_ang_vel_rads);
 
@@ -364,6 +397,7 @@ void AC_AttitudeControl::attitude_controller_run_euler(const Vector3f& att_targe
 {
     // Compute quaternion target attitude
     Quaternion att_target_quat;
+
     att_target_quat.from_euler(att_target_euler_rad.x, att_target_euler_rad.y, att_target_euler_rad.z);
 
     // Call quaternion attitude controller
@@ -393,11 +427,26 @@ void AC_AttitudeControl::attitude_controller_run_quat(const Quaternion& att_targ
     _ang_vel_target_rads += Trv * _att_target_ang_vel_rads;
 }
 
+#include <AP_HAL/AP_HAL.h>
+extern const AP_HAL::HAL& hal;
+
 void AC_AttitudeControl::rate_controller_run()
 {
+	/* uncomment to debug motors */
+	/*
+	static long long time = 0; 
+	long long now = AP_HAL::millis(); 
+	if(now > time + 1000){
+		hal.console->printf("M: %f %f\n", _ang_vel_target_rads.y, _motor_tilt_pitch_ang); 
+		time = now; 
+	}
+	*/
     _motors.set_roll(rate_bf_to_motor_roll(_ang_vel_target_rads.x));
     _motors.set_pitch(rate_bf_to_motor_pitch(_ang_vel_target_rads.y));
     _motors.set_yaw(rate_bf_to_motor_yaw(_ang_vel_target_rads.z));
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	_motors.set_motor_tilt_angle_pitch(_motor_tilt_pitch_ang); 
+#endif
     control_monitor_update();
 }
 

@@ -105,3 +105,7 @@ void AP_MotorsQuad::setup_motors()
     // normalise factors to magnitude 0.5
     normalise_rpy_factors();
 }
+
+void AP_MotorsQuad::output(){
+	AP_MotorsMatrix::output(); 
+}

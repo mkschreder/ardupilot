@@ -128,6 +128,8 @@ public:
     // pilot input in the -1 ~ +1 range for roll, pitch and yaw. 0~1 range for throttle
     void                set_radio_passthrough(float roll_input, float pitch_input, float throttle_input, float yaw_input);
 
+	// motor tilt pitch (will be sent to correct servo in subclassed motor class)
+	void 	set_motor_tilt_angle_pitch(float pitch) { _tilt_pitch = pitch; }
 protected:
     // output functions that should be overloaded by child classes
     virtual void        output_armed_stabilizing()=0;
@@ -161,6 +163,9 @@ protected:
     float               _roll_in;                   // desired roll control from attitude controllers, -1 ~ +1
     float               _pitch_in;                  // desired pitch control from attitude controller, -1 ~ +1
     float               _yaw_in;                    // desired yaw control from attitude controller, -1 ~ +1
+
+	float				_tilt_pitch; 				// desired motor tilt from attitude control (if supported)
+
     float               _throttle_in;               // last throttle input from set_throttle caller
     LowPassFilterFloat  _throttle_filter;           // throttle input filter
     spool_up_down_desired _spool_desired;           // desired spool state
