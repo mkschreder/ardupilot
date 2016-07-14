@@ -286,8 +286,10 @@ void AC_AttitudeControl::input_euler_rate_roll_pitch_yaw(float euler_roll_rate_c
 #if FRAME_CONFIG == QUAD_PTILT_FRAME
 	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
 	// TODO: revisit this because it is rate control here. 
-	_motor_tilt_pitch_ang = euler_pitch_rate_cds * 0.01f; 
-	euler_pitch_rate_rads = 0; 
+	//_motor_tilt_pitch_ang = euler_pitch_rate_cds * 0.01f; 
+	//euler_pitch_rate_rads = 0; 
+	// for now disable tilt completely in rate mode so that rate mode works but without tilt
+	_motor_tilt_pitch_ang = 0; 
 #endif
 
     // Compute acceleration-limited euler roll rate
@@ -397,7 +399,6 @@ void AC_AttitudeControl::attitude_controller_run_euler(const Vector3f& att_targe
 {
     // Compute quaternion target attitude
     Quaternion att_target_quat;
-
     att_target_quat.from_euler(att_target_euler_rad.x, att_target_euler_rad.y, att_target_euler_rad.z);
 
     // Call quaternion attitude controller
