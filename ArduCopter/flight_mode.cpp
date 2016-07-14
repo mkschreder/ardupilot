@@ -38,8 +38,6 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
         case STABILIZE:
             #if FRAME_CONFIG == HELI_FRAME
                 success = heli_stabilize_init(ignore_checks);
-			#elif FRAME_CONFIG == QUAD_PTILT_FRAME
-				success = stabilize_ptilt_init(ignore_checks); 
             #else
                 success = stabilize_init(ignore_checks);
             #endif
@@ -104,6 +102,10 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
         case THROW:
             success = throw_init(ignore_checks);
             break;
+		
+		case RANGER: 
+			success = control_ranger_init(ignore_checks); 
+			break; 
 
         default:
             success = false;
@@ -147,6 +149,7 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
 void Copter::update_flight_mode()
 {
     // Update EKF speed limit - used to limit speed when we are using optical flow
+	// Remark: Wtf is this for a hack? - Martin 
     ahrs.getEkfControlLimits(ekfGndSpdLimit, ekfNavVelGainScaler);
 
     switch (control_mode) {
@@ -161,8 +164,6 @@ void Copter::update_flight_mode()
         case STABILIZE:
             #if FRAME_CONFIG == HELI_FRAME
                 heli_stabilize_run();
-			#elif FRAME_CONFIG == QUAD_PTILT_FRAME
-				stabilize_ptilt_run(); 
             #else
                 stabilize_run();
             #endif
@@ -227,6 +228,10 @@ void Copter::update_flight_mode()
         case THROW:
             throw_run();
             break;
+		
+		case RANGER:
+			control_ranger_run(); 
+			break; 
 
         default:
             break;

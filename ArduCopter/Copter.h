@@ -857,8 +857,8 @@ private:
     void sport_run();
     bool stabilize_init(bool ignore_checks);
     void stabilize_run();
-	bool stabilize_ptilt_init(bool ignore_checks); 
-	void stabilize_ptilt_run(); 
+	bool control_ranger_init(bool ignore_checks); 
+	void control_ranger_run(); 
     void crash_check();
     void parachute_check();
     void parachute_release();

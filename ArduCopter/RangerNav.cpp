@@ -29,28 +29,29 @@ RangerNav::PVPredictor::PVPredictor(){
 	})); 
 	_lp_velocity.set_cutoff_frequency(1.0); 
 	_velocity = 0; 
+	_position = 0; 
 }
 
 void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float range_pos, float range_neg, float dt){
 	//_smooth_flow.update(flow_vel); 
-	_median_pos.update(constrain_float(range_pos, 0, 0.75)); 
-	_median_neg.update(constrain_float(range_neg, 0, 0.75)); 
+	_median_pos.update(range_pos); 
+	_median_neg.update(range_neg); 
 
 	const float vfb[3] = {
 		//_smooth_flow.get(),
 		flow_vel, 
-		_median_pos.get(), 
-		_median_neg.get()
+		_smooth_pos.update(_median_pos.get()), 
+		_smooth_neg.update(_median_neg.get())
 	}; 
 	math::Vector<3> zk(vfb); 
 	_zk = zk; 
 
 	if(flow_quality > 0) {
 		const float F[4][4] = {
-			{0.0, 0.0, 0.5, -0.5}, 	// compute final center from average of back and front
+			{0.0, 0.0, 1.0, -1.0}, 	// compute final center from average of back and front
 			{0.0, 1.0, 0.0, 0.0}, 	// let velocity stay the same 
-			{0.0, -dt, 1.0, 0.0}, 	// compute next front from integration of velocity and sensor reading
-			{0.0, dt, 0.0, 1.0} 	// compute next back from integration of velocity and sensor reading
+			{0.0, 0.0, 1.0, 0.0}, 	// compute next front from integration of velocity and sensor reading
+			{0.0, 0.0, 0.0, 1.0} 	// compute next back from integration of velocity and sensor reading
 		}; 
 		_kf.set_state_transition_matrix(math::Matrix<4,4>(F)); 
 		const float H[3][4] = {
@@ -66,13 +67,13 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 		float flow_noise = 0.0; //0.4 * constrain_float(1.0 - (flow_quality), 0, 1.0); 
 		const float R[3][3] = {
 			{flow_noise, 0.0, 0.0},
-			{0.0, zk(1) * 2.0, 0.0},
-			{0.0, 0.0, zk(2) * 2.0}
+			{0.0, 0.2, 0.0},
+			{0.0, 0.0, 0.2}
 		}; 
 		_kf.set_sensor_covariance_matrix(math::Matrix<3, 3>(R)); 
 	} else {
 		const float F[4][4] = {
-			{0.0, 0.0, 0.5, -0.5},
+			{0.0, 0.0, 1.0, -1.0},
 			{0.0, 1.0, 0.0, 0.0},
 			{0.0, 0.0, 1.0, 0.0},
 			{0.0, 0.0, 0.0, 1.0}
@@ -108,17 +109,21 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 		//_lp_velocity.apply(_median_velocity.update((p(0) - prev(0)) / dt), dt);  
 	}
 	
-	_offset += flow_vel * dt;  
+	_position += flow_vel * dt;  
 }
 
 float RangerNav::PVPredictor::get_last_velocity_prediction(){
 	return -_velocity; 
 }
 
+float RangerNav::PVPredictor::get_integrated_position(){
+	return _position; 
+}
+
 float RangerNav::PVPredictor::get_last_offset_prediction(){
 	//return _smooth_pos.update((_zk(1) - _zk(2)) / 2); 
 	//return -_kf.get_prediction()(0); 
-	return _offset; 
+	return -_kf.get_prediction()(0); 
 }
 
 RangerNav::RangerNav(AP_AHRS *ahrs, AP_RangeFinder_6DOF *rangefinder, AP_InertialSensor *ins, OpticalFlow *optflow, AP_Baro *baro){
@@ -181,8 +186,12 @@ void RangerNav::update(float dt){
 
 		float flow_quality = (float)_optflow->quality() / 255.0; 
 
-		_pv_x.input(vel.x, flow_quality, front, back, rdt); 
-		_pv_y.input(vel.y, flow_quality, right, left, rdt); 
+		_pv_x.input(vel.x, flow_quality, 
+			constrain_float(front, 0, 0.75), 
+			constrain_float(back, 0, 0.75), rdt); 
+		_pv_y.input(vel.y, flow_quality, 
+			constrain_float(right, 0, 0.5), 
+			constrain_float(left, 0, 0.5), rdt); 
 	
 		math::Vector<3> zk = _pv_x.get_last_input(); 	
 		math::Vector<4> p = _pv_x.get_last_prediction(); 
@@ -210,9 +219,9 @@ void RangerNav::update(float dt){
 		}
 		fprintf(logfile, "\n"); 
 
-		/*hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
-			vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
-		*/
+		//hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
+		//		vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
+		
 		_last_range_reading = last_reading; 
 	}
 	// update navigation filters
@@ -230,10 +239,18 @@ Vector3f RangerNav::get_velocity() {
 	);
 }
 
+Vector3f RangerNav::get_center_target() {
+	// center position relative of quad is opposite of quad offset from center (which the estimator currently estimates!)
+	return Vector3f(
+		-_pv_x.get_last_offset_prediction(), 
+		-_pv_y.get_last_offset_prediction(),
+		0
+	);
+}
 Vector3f RangerNav::get_position() {
 	return Vector3f(
-		_pv_x.get_last_offset_prediction(), 
-		_pv_y.get_last_offset_prediction(),
+		_pv_x.get_integrated_position(), 
+		_pv_y.get_integrated_position(),
 		0
 	);
 }

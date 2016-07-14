@@ -97,12 +97,19 @@ void RangeAvoid::update(float dt){
 
 	static Vector3f target_pos = Vector3f(0, 0, 0); 
 
+	Vector3f center = _nav->get_center_target(); 
+
 	if(!_nav->have_position()){
-		target_pos = pos + Vector3f(_desired_forward, _desired_right, 0); 
+		target_pos = pos; 
+
+		_pitch_center_pid.set_input_filter_all(constrain_float(_desired_forward, -2.0, 2.0)); 
+		_roll_center_pid.set_input_filter_all(constrain_float(_desired_right, -2.0, 2.0)); 
+
 		_pitch_center_pid.reset_I(); 
 		_roll_center_pid.reset_I(); 
 	} else {
 		static bool reset_pitch = false, reset_roll = false; 
+
 		if(is_zero(_desired_forward)){
 			if(reset_pitch){
 				target_pos.x = pos.x; 
@@ -124,8 +131,8 @@ void RangeAvoid::update(float dt){
 			reset_roll = true; 
 		}
 
-		_pitch_center_pid.set_input_filter_all(constrain_float(target_pos.x - pos.x, -2.0, 2.0)); 
-		_roll_center_pid.set_input_filter_all(constrain_float(target_pos.y - pos.y, -2.0, 2.0)); 
+		_pitch_center_pid.set_input_filter_all(constrain_float(target_pos.x + center.x - pos.x, -2.0, 2.0)); 
+		_roll_center_pid.set_input_filter_all(constrain_float(target_pos.y + center.y - pos.y, -2.0, 2.0)); 
 	}
 	//_pitch_center_pid.set_input_filter_all(target_pos.x - pos.x); 
 	//_roll_center_pid.set_input_filter_all(target_pos.y - pos.y); 
@@ -140,7 +147,8 @@ void RangeAvoid::update(float dt){
 
 	//_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 	//_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-	
+
+	//hal.console->printf("c(%f %f) out(%f %f)\n", (double)center.x, (double)center.y, (double)_output_pitch, (double)_output_roll); 
 	//hal.console->printf("%f %f -> %f %f - e - %f %f -> %f %f\n", _desired_forward, _desired_right, pos.x, pos.y, target_pos.x - pos.x, target_pos.y - pos.y, _output_pitch, _output_roll);  
 
 	//hal.console->printf("%f %f %f %f %f %f\n", _desired_forward, _desired_right, _pitch_center_pid.get_pid(), _roll_center_pid.get_pid(), _output_pitch, _output_roll); 

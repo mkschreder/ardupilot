@@ -1,8 +1,8 @@
 #include "Copter.h"
 
 // same controller as the stabi
-bool Copter::stabilize_ptilt_init(bool ignore_checks){
-	hal.console->printf("Stabilize init.\n"); 
+bool Copter::control_ranger_init(bool ignore_checks){
+	hal.console->printf("Ranger mode init.\n"); 
 	stabilize_init(ignore_checks); 
 	range_avoid.reset(); 	
 
@@ -34,7 +34,7 @@ FILE *logfile = 0;
 // roll and yaw compensation however needs to be done here. 
 // otherwise it does pretty much the same job as the stabilization controller
 // should be called at 100hz or more
-void Copter::stabilize_ptilt_run()
+void Copter::control_ranger_run()
 {
     float target_roll, target_pitch;
     float target_yaw_rate;
@@ -101,7 +101,7 @@ void Copter::stabilize_ptilt_run()
 	float rc_center_i = (1.2 * ku) / tu; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
 	float rc_center_d = (0.6 * ku * tu) / 8; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 
-	hal.console->printf("%f, %f, %f, %f, %f\n", ku, tu, rc_center_p, rc_center_i, rc_center_d); 
+	//hal.console->printf("%f, %f, %f, %f, %f\n", ku, tu, rc_center_p, rc_center_i, rc_center_d); 
 
 	range_avoid.set_vel_kP(rc_vel_p); 
 	range_avoid.set_vel_kI(rc_vel_i); 
@@ -206,14 +206,14 @@ void Copter::stabilize_ptilt_run()
 	// support body pitch on channel 4 so we can adjust body tilting when we fly. 
 	// this will also rotate the tilt motors in the opposite direction. 
 	// TODO: make all of this stuff configurable
-	float bodyTilt = (hal.rcin->read(4) - 1500) / 500.0 * 90.0; 
-	bodyTilt = 0; // disable for now
-	float motorTilt = target_pitch * 0.01; 	
+	//float bodyTilt = (hal.rcin->read(4) - 1500) / 500.0 * 90.0; 
+	//bodyTilt = 0; // disable for now
+	//float motorTilt = target_pitch * 0.01; 	
 
-	motors.set_motor_tilt(motorTilt - bodyTilt); 
+	//motors.set_motor_tilt(motorTilt - bodyTilt); 
 
 	// zero the target_pitch because we will be handling forward movement using motor tilt
-	target_pitch = 0; 
+	//target_pitch = 0; 
 #endif
 
     //attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, bodyTilt * 100, target_yaw_rate, get_smoothing_gain());
