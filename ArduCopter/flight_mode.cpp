@@ -281,7 +281,7 @@ void Copter::exit_mode(control_mode_t old_control_mode, control_mode_t new_contr
     // stab col ramp value should be pre-loaded to the correct value to avoid a twitch
     // heli_stab_col_ramp should really only be active switching between Stabilize and Acro modes
     if (!mode_has_manual_throttle(old_control_mode)){
-        if (new_control_mode == STABILIZE){
+        if (new_control_mode == STABILIZE || new_control_mode == RANGER){
             input_manager.set_stab_col_ramp(1.0);
         } else if (new_control_mode == ACRO){
             input_manager.set_stab_col_ramp(0.0);
@@ -315,6 +315,7 @@ bool Copter::mode_has_manual_throttle(control_mode_t mode) {
     switch(mode) {
         case ACRO:
         case STABILIZE:
+		case RANGER: // TODO: ranger does NOT use manual throttle, but quad spontaineously thinks that it has landed if this is not here. Needs investigation.. 
             return true;
         default:
             return false;
@@ -326,7 +327,7 @@ bool Copter::mode_has_manual_throttle(control_mode_t mode) {
 // mode_allows_arming - returns true if vehicle can be armed in the specified mode
 //  arming_from_gcs should be set to true if the arming request comes from the ground station
 bool Copter::mode_allows_arming(control_mode_t mode, bool arming_from_gcs) {
-    if (mode_has_manual_throttle(mode) || mode == LOITER || mode == ALT_HOLD || mode == POSHOLD || mode == DRIFT || mode == SPORT || mode == THROW || (arming_from_gcs && mode == GUIDED)) {
+    if (mode_has_manual_throttle(mode) || mode == LOITER || mode == ALT_HOLD || mode == POSHOLD || mode == DRIFT || mode == SPORT || mode == THROW || mode == RANGER || (arming_from_gcs && mode == GUIDED)) {
         return true;
     }
     return false;
@@ -404,6 +405,9 @@ void Copter::print_flight_mode(AP_HAL::BetterStream *port, uint8_t mode)
     case THROW:
         port->print("THROW");
         break;
+	case RANGER:
+		port->print("RANGER"); 
+		break; 
     default:
         port->printf("Mode(%u)", (unsigned)mode);
         break;
