@@ -28,8 +28,9 @@ RangerNav::PVPredictor::PVPredictor(){
 		{0.0, 0.0, 0.0, 0.001}
 	})); 
 	_lp_velocity.set_cutoff_frequency(1.0); 
+	_lp_pos.set_cutoff_frequency(0.5); 
+	_lp_neg.set_cutoff_frequency(0.5); 
 	_velocity = 0; 
-	_position = 0; 
 }
 
 void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float range_pos, float range_neg, float dt){
@@ -40,8 +41,8 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 	const float vfb[3] = {
 		//_smooth_flow.get(),
 		flow_vel, 
-		_smooth_pos.update(_median_pos.get()), 
-		_smooth_neg.update(_median_neg.get())
+		_lp_pos.apply(_median_pos.get(), dt), 
+		_lp_neg.apply(_median_neg.get(), dt)
 	}; 
 	math::Vector<3> zk(vfb); 
 	_zk = zk; 
@@ -108,16 +109,10 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 		//_lp_velocity.apply((p(0) - prev(0)) / dt, dt);  
 		//_lp_velocity.apply(_median_velocity.update((p(0) - prev(0)) / dt), dt);  
 	}
-	
-	_position += flow_vel * dt;  
 }
 
 float RangerNav::PVPredictor::get_last_velocity_prediction(){
 	return -_velocity; 
-}
-
-float RangerNav::PVPredictor::get_integrated_position(){
-	return _position; 
 }
 
 float RangerNav::PVPredictor::get_last_offset_prediction(){
@@ -149,8 +144,8 @@ extern FILE *logfile;
 
 void RangerNav::update(float dt){
 	// calculate acceleration in xy plane 
-	Vector3f accel = _ins->get_accel(); 
-	Vector3f gyro = _ins->get_gyro(); 
+	//Vector3f accel = _ins->get_accel(); 
+	//Vector3f gyro = _ins->get_gyro(); 
 	//Vector3f mag = _ins->get_mag(); 
 	//float accel_len = accel.length(); 
 	//accel.x = (double)accel.x - (double)sin(_ahrs->pitch) * (double)accel_len; 
@@ -167,57 +162,45 @@ void RangerNav::update(float dt){
 	*/
 
 	// read rangefinder
-	_rangefinder->update(dt); 
+	//_rangefinder->update(dt); 
 
+	// TODO: move this 
+	float _yaw_mat[3][3] = {
+		{ _ahrs->cos_yaw(), _ahrs->sin_yaw(), 	0.0},
+		{ -_ahrs->sin_yaw(), _ahrs->cos_yaw(), 	0.0},
+		{ 0.0, 0.0, 1.0 }
+	}; 
+	math::Matrix<3, 3> yaw_mat(_yaw_mat); 
+
+	Vector2f flow_rate = _optflow->flowRate(); 
+	math::Vector<3> vel_ef = yaw_mat * math::Vector<3>(flow_rate.x, flow_rate.y, 0) * _altitude; 
+
+	// update position integral and altitude
+	_position += vel_ef * dt + math::Vector<3>(0, 0, _altitude); 
+
+	// recalculate other variables once rangefinder readings arrive
 	long long last_reading = _rangefinder->last_update_millis(); 
 	if(_last_range_reading != last_reading){	
 		float __attribute__((unused)) rdt = 0.04; 
 		/*if(_last_range_reading != 0){
 			rdt = (last_reading - _last_range_reading) * 0.001; 
 		}*/
-
 		float front, back, right, left, bottom, top; 
 
 		_rangefinder->get_readings_m(&front, &back, &right, &left, &bottom, &top); 
 
 		float altitude = calculate_altitude(bottom, _rangefinder->have_bottom()); 
-		Vector2f flow = _optflow->flowRate(); 
-		Vector2f vel = flow * altitude; 
-
 		float flow_quality = (float)_optflow->quality() / 255.0; 
 
-		_pv_x.input(vel.x, flow_quality, 
+		_pv_x.input(vel_ef(0), flow_quality, 
 			constrain_float(front, 0, 0.75), 
 			constrain_float(back, 0, 0.75), rdt); 
-		_pv_y.input(vel.y, flow_quality, 
+		_pv_y.input(vel_ef(1), flow_quality, 
 			constrain_float(right, 0, 0.5), 
 			constrain_float(left, 0, 0.5), rdt); 
 	
-		math::Vector<3> zk = _pv_x.get_last_input(); 	
-		math::Vector<4> p = _pv_x.get_last_prediction(); 
-	
-		struct frame {
-			float fx, front, back, vx, px; 
-			float fy, right, left, vy, py; 
-			float bottom; 
-			float altitude; 
-			float ax, ay, az; 
-			float gx, gy, gz; 
-		}; 
-		struct frame f; 
-		f.fx = flow.x; f.front = front; f.back = back; 
-		f.vx = _pv_x.get_last_velocity_prediction(); f.px = _pv_x.get_last_offset_prediction(); 
-		f.fy = flow.y; f.right = right; f.left = left; 
-		f.vy = _pv_y.get_last_velocity_prediction(); f.py = _pv_y.get_last_offset_prediction(); 
-		f.ax = accel.x; f.ay = accel.y; f.az = accel.z; 
-		f.gx = gyro.x; f.gy = gyro.y; f.gz = gyro.z; 
-		f.bottom = bottom; 
-		f.altitude = altitude; 
-		char *data = (char*)&f; 
-		for(size_t c = 0; c < sizeof(f); c++){
-			fprintf(logfile, "%02x", (unsigned int)*(data+c)); 
-		}
-		fprintf(logfile, "\n"); 
+		//math::Vector<3> zk = _pv_x.get_last_input(); 	
+		//math::Vector<4> p = _pv_x.get_last_prediction(); 
 
 		//hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
 		//		vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
@@ -247,10 +230,13 @@ Vector3f RangerNav::get_center_target() {
 		0
 	);
 }
-Vector3f RangerNav::get_position() {
-	return Vector3f(
+
+Vector3f RangerNav::get_position_ef() {
+	return Vector3f(_position(0), _position(1), _position(2)); 
+	/*Vector3f(
 		_pv_x.get_integrated_position(), 
 		_pv_y.get_integrated_position(),
 		0
-	);
+	);*/
 }
+

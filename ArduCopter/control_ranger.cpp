@@ -122,8 +122,56 @@ void Copter::control_ranger_run()
 
 		range_avoid.update(G_Dt); 
 
-		target_pitch = range_avoid.get_desired_pitch_angle() * 100.0f; 
-		target_roll = range_avoid.get_desired_roll_angle() * 100.0f; 
+		/** BLACK BOX LOGGING HERE. Should not be in production! */
+		long long last_reading = rangefinders.last_update_millis(); 
+		static long long _last_range_reading = 0;  
+		if(_last_range_reading != last_reading){	
+			struct frame {
+				float fx, front, back, vx; 
+				float fy, right, left, vy; 
+				float bottom; //9 
+				float ax, ay, az;//10 
+				float gx, gy, gz;//13 
+				float px, py, pz;//16 
+				float motor_front_left, motor_front_right, motor_back_right, motor_back_left; 
+				float pilot_throttle, pilot_yaw, pilot_pitch, pilot_roll; 
+			}; 
+			struct frame f; 
+			Vector2f flow = optflow.flowRate(); 
+			float top; 
+			rangefinders.get_readings_m(&f.front, &f.back, &f.right, &f.left, &f.bottom, &top); 
+			motors.get_motor_outputs(&f.motor_front_left, &f.motor_front_right, &f.motor_back_right, &f.motor_back_left);  
+			f.pilot_throttle = channel_throttle->get_control_in();
+			f.pilot_yaw = target_yaw_rate; 
+			f.pilot_pitch = target_pitch * 0.01; 
+			f.pilot_roll = target_roll * 0.01; 
+			Vector3f pos_ef = ranger_nav.get_position_ef(); 
+			Vector3f vel = ranger_nav.get_velocity(); 
+			//Vector3f off = ranger_nav.get_center_target(); 
+			Vector3f accel = ins.get_accel(); 
+			Vector3f gyro = ins.get_gyro(); 
+			f.fx = flow.x; 
+			f.fy = flow.y; 
+			f.vx = vel.x; 
+			f.vy = vel.y;
+			f.ax = accel.x; f.ay = accel.y; f.az = accel.z; 
+			f.gx = gyro.x; f.gy = gyro.y; f.gz = gyro.z; 
+			f.px = pos_ef.x; 
+			f.py = pos_ef.y; 
+			f.pz = pos_ef.z; 
+			char *data = (char*)&f; 
+			for(size_t c = 0; c < sizeof(f); c++){
+				fprintf(logfile, "%02x", (unsigned int)*(data+c)); 
+			}
+			fprintf(logfile, "\n"); 
+			_last_range_reading = last_reading; 
+
+			//hal.console->printf("%d %f %f %f\n", (int) althold_state, (double)f.bottom, (double)target_pitch * 0.01, (double)target_roll * 0.01); 
+		}
+
+		target_pitch = constrain_float(range_avoid.get_desired_pitch_angle(), -45.0f, 45.0f) * 100.0f; 
+		target_roll = constrain_float(range_avoid.get_desired_roll_angle(), -45.0f, 45.0f) * 100.0f; 
+
 	} else {
 		if(logfile){
 			fclose(logfile); 
@@ -132,6 +180,7 @@ void Copter::control_ranger_run()
 		}
 		range_avoid.reset(); 
 	}
+
 /*	
 	float center_offset = range_avoid.get_center_offset().x; 
 	float front, back, right, left, bottom, top; 

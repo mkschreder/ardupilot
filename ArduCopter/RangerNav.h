@@ -31,7 +31,7 @@ public:
 
 	void update(float dt); 	
 	Vector3f get_velocity(); 
-	Vector3f get_position(); 
+	Vector3f get_position_ef(); 
 	Vector3f get_center_target(); 
 
 	bool have_position(); 
@@ -55,7 +55,6 @@ private:
 		void input(float velocity, float vel_quality, float range_pos, float range_neg, float dt); 	
 		float get_last_velocity_prediction(); 
 		float get_last_offset_prediction(); 
-		float get_integrated_position(); 
 
 		math::Vector<3> get_last_input(){ return _zk; }
 		math::Vector<4> get_last_prediction(){ return _kf.get_prediction(); }
@@ -63,9 +62,9 @@ private:
 		MedianFilter<7> _median_pos, _median_neg;  
 		MedianFilter<3> _median_flow, _median_velocity; 
 		MeanFilter<3> _smooth_pos, _smooth_neg, _smooth_flow; 
+		LowPassFilterFloat _lp_pos, _lp_neg; 
 		LowPassFilterFloat _lp_velocity; 
 		float _velocity; 
-		float _position; 
 		KalmanFilter<3, 4> _kf; 
 		math::Vector<3> _zk; 
 	}; 
@@ -86,6 +85,8 @@ private:
 	Vector2f _flow_ground_speed; 
 	MedianFilter<7> _median_bottom, _median_flow; 
 	MeanFilter<3> _smooth_bottom, _smooth_flow; 
+	math::Vector<3> _position; 
+
 	float _altitude; 
 	float _baro_zero_altitude; 
 	long long _last_range_reading; 

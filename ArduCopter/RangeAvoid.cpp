@@ -23,7 +23,7 @@
 
 #include "KalmanFilter.h"
 
-RangeAvoid::RangeAvoid(RangerNav *nav):
+RangeAvoid::RangeAvoid(AP_AHRS *ahrs, RangerNav *nav):
 	_pitch_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
 	_roll_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
 	_pitch_center_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
@@ -33,6 +33,7 @@ RangeAvoid::RangeAvoid(RangerNav *nav):
 	_pitchComp = 0; 
 	_rollComp = 0; 
 	_desired_forward = _desired_right = 0; 
+	_ahrs = ahrs; 
 	//_flow_front_filt.set_cutoff_frequency(5.0); 
 	//_flow_right_filt.set_cutoff_frequency(5.0); 
 }
@@ -92,24 +93,37 @@ void RangeAvoid::update(float dt){
 
 	_nav->update(dt); 
 
-	Vector3f vel = _nav->get_velocity(); 
-	Vector3f pos = _nav->get_position(); 
+	Vector3f p = _nav->get_position_ef(); 
 
-	static Vector3f target_pos = Vector3f(0, 0, 0); 
+	float _yaw_mat[3][3] = {
+		{ _ahrs->cos_yaw(), _ahrs->sin_yaw(), 0.0 },
+        { -_ahrs->sin_yaw(), _ahrs->cos_yaw(), 0.0 },
+		{ 0, 0, 1}
+	}; 
+	math::Matrix<3, 3> yaw_mat(_yaw_mat); 
+	math::Matrix<3, 3> yaw_mat_inv = yaw_mat.inversed(); 
 
-	Vector3f center = _nav->get_center_target(); 
+	math::Vector<3> pos_ef(p.x, p.y, p.z); 
+
+	// transform velocity from body frame to earth frame (we only use yaw)
+	math::Vector<3> input_ef = yaw_mat * math::Vector<3>(_desired_forward, _desired_right, 0.0); 
+	math::Vector<3> out_ef; 
 
 	if(!_nav->have_position()){
-		target_pos = pos; 
+		_target_pos_ef = pos_ef; 
 
-		_pitch_center_pid.set_input_filter_all(constrain_float(_desired_forward, -2.0, 2.0)); 
-		_roll_center_pid.set_input_filter_all(constrain_float(_desired_right, -2.0, 2.0)); 
+		_pitch_center_pid.set_input_filter_all(constrain_float(input_ef(0), -2.0, 2.0)); 
+		_roll_center_pid.set_input_filter_all(constrain_float(input_ef(1), -2.0, 2.0)); 
 
 		_pitch_center_pid.reset_I(); 
 		_roll_center_pid.reset_I(); 
-	} else {
-		static bool reset_pitch = false, reset_roll = false; 
 
+		out_ef(0) = _pitch_center_pid.get_p(); 
+		out_ef(1) = _roll_center_pid.get_p(); 
+	} else {
+		/*
+		static bool reset_pitch = false, reset_roll = false; 
+		
 		if(is_zero(_desired_forward)){
 			if(reset_pitch){
 				target_pos.x = pos.x; 
@@ -130,26 +144,39 @@ void RangeAvoid::update(float dt){
 			target_pos.y += _desired_right * dt; 
 			reset_roll = true; 
 		}
+		*/
+	
+		_target_pos_ef += input_ef * dt; 
 
-		_pitch_center_pid.set_input_filter_all(constrain_float(target_pos.x + center.x - pos.x, -2.0, 2.0)); 
-		_roll_center_pid.set_input_filter_all(constrain_float(target_pos.y + center.y - pos.y, -2.0, 2.0)); 
+		//Vector3f center = _nav->get_center_target(); 
+		//target_pos.x += center.x * 4 * dt; 
+		//target_pos.y += center.y * 4 * dt; 
+
+		_pitch_center_pid.set_input_filter_all(constrain_float(_target_pos_ef(0) - pos_ef(0), -2.0, 2.0)); 
+		_roll_center_pid.set_input_filter_all(constrain_float(_target_pos_ef(1) - pos_ef(1), -2.0, 2.0)); 
+
+		out_ef(0) = _pitch_center_pid.get_pid(); 
+		out_ef(1) = _roll_center_pid.get_pid(); 
 	}
 	//_pitch_center_pid.set_input_filter_all(target_pos.x - pos.x); 
 	//_roll_center_pid.set_input_filter_all(target_pos.y - pos.y); 
 
 	//_pitch_pid.set_input_filter_all(desired_vel.x - vel.x); 
-	_pitch_pid.set_input_filter_all(_desired_forward - _pitch_center_pid.get_pid() - vel.x); 
-	_roll_pid.set_input_filter_all(_desired_right - _roll_center_pid.get_pid() - vel.y); 
+	//_pitch_pid.set_input_filter_all(_desired_forward - _pitch_center_pid.get_pid() - vel.x); 
+	//_roll_pid.set_input_filter_all(_desired_right - _roll_center_pid.get_pid() - vel.y); 
 	//_roll_pid.set_input_filter_all(desired_vel.y - vel.y); 
 
-	_output_pitch = -constrain_float(_pitch_center_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
-	_output_roll = constrain_float(_roll_center_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+	math::Vector<3> out = yaw_mat_inv * out_ef; 
+
+	_output_pitch = -constrain_float(out(0), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
+	_output_roll = constrain_float(out(1), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 
 	//_output_pitch = -constrain_float(_pitch_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 	//_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 
 	//hal.console->printf("c(%f %f) out(%f %f)\n", (double)center.x, (double)center.y, (double)_output_pitch, (double)_output_roll); 
-	//hal.console->printf("%f %f -> %f %f - e - %f %f -> %f %f\n", _desired_forward, _desired_right, pos.x, pos.y, target_pos.x - pos.x, target_pos.y - pos.y, _output_pitch, _output_roll);  
+	hal.console->printf("YAW: %f, OUT(%f %f)\n", _ahrs->yaw, _output_pitch, _output_roll); 
+	//hal.console->printf("%f %f -> %f %f - e - %f %f -> %f %f\n", _desired_forward, _desired_right, pos(0), pos(1), target_pos(0) - pos(0), target_pos(1) - pos(1), _output_pitch, _output_roll);  
 
 	//hal.console->printf("%f %f %f %f %f %f\n", _desired_forward, _desired_right, _pitch_center_pid.get_pid(), _roll_center_pid.get_pid(), _output_pitch, _output_roll); 
 	//_debug_console.printf("%f, %f\n", (double)_output_pitch, (double)_output_roll); 

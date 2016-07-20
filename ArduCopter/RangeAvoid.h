@@ -26,7 +26,7 @@
 
 class RangeAvoid {
 public: 
-	RangeAvoid(RangerNav *_nav); 
+	RangeAvoid(AP_AHRS *ahrs, RangerNav *_nav); 
 
 	void set_vel_kP(float kp); 
 	void set_vel_kI(float ki); 
@@ -54,9 +54,11 @@ private:
 	Vector2f get_wall_avoidance_velocity_compensation(); 
 
 	RangerNav *_nav; 
+	AP_AHRS *_ahrs; 
 
 	AC_PID _pitch_pid, _roll_pid; 
 	AC_PID _pitch_center_pid, _roll_center_pid; 
+	math::Vector<3> _target_pos_ef; 
 	float _pitchComp, _rollComp; 
 	float _flow_front_filtered, _flow_right_filtered; 
 	float _flow_distance_front, _flow_distance_right; 
