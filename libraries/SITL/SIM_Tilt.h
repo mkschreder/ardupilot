@@ -41,15 +41,21 @@ public:
     }
 
 private:
+	enum {
+		MODE_CLIENT_SIM = 0, 
+		MODE_SERVER_SIM = 1
+	}; 
 	// tilt sim servo packets
-    struct servo_packet {
+    struct server_packet {
+		uint8_t mode; 
 		int16_t servo[8]; 
 		double pos[3]; 
+		double vel[3]; 
 		double euler[3]; 
     };
 
 	// packets sent from tilt sim to us
-    struct fdm_packet {
+    struct client_packet {
         double timestamp;
 		double gyro[3]; 
 		double accel[3]; 
@@ -65,6 +71,7 @@ private:
 	
 	long long _packet_timeout; 
     SocketAPM sock;
+	uint8_t _mode; 
     Frame *_frame;
 };
 

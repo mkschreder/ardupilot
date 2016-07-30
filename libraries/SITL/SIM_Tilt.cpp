@@ -32,6 +32,7 @@ TiltSim::TiltSim(const char *home_str, const char *frame_str) :
     sock(true)
 {
 	_frame = NULL; 
+	_mode = MODE_CLIENT_SIM; 
 	_packet_timeout = 0; 
 	if(frame_str){
 		printf("Looking up frame %s\n", frame_str); 
@@ -54,7 +55,7 @@ TiltSim::TiltSim(const char *home_str, const char *frame_str) :
 }
 
 void TiltSim::send_state(const struct sitl_input &input){
-    servo_packet pkt;
+    server_packet pkt;
 	memset(&pkt, 0, sizeof(pkt)); 
 
 	for(int c = 0; c < 8; c++){
@@ -63,9 +64,14 @@ void TiltSim::send_state(const struct sitl_input &input){
 
 	float r, p, y;
 	dcm.to_euler(&r, &p, &y);
-	
+
+	Vector3f velocity = dcm.transposed() * velocity_ef; 
+	pkt.mode = _mode; 
 	pkt.euler[0] = r; pkt.euler[1] = p; pkt.euler[2] = y; 
 	pkt.pos[0] = position.x; pkt.pos[1] = position.y; pkt.pos[2] = position.z; 
+	pkt.vel[0] = velocity.x; pkt.vel[1] = velocity.y; pkt.vel[2] = velocity.z; 
+
+	printf("gyr(%f %f %f)\n", gyro.x, gyro.y, gyro.z); 
 
     sock.sendto(&pkt, sizeof(pkt), "127.0.0.1", 9002);
 }
@@ -91,30 +97,7 @@ void TiltSim::drain_control_socket()
 }
 
 void TiltSim::recv_fdm(const struct sitl_input &input){
-    fdm_packet pkt;
-	memset(&pkt, sizeof(pkt), 0); 
 
-	if(sock.recv(&pkt, sizeof(pkt), 0) == sizeof(pkt)){
-		::printf("ax: %f\t%f\nay: %f\t%f\naz: %f\t%f\n", pkt.accel[0], accel_body.x, pkt.accel[1], accel_body.y, pkt.accel[2], accel_body.z); 
-		::printf("gx: %f\t%f\ngy: %f\t%f\ngz: %f\t%f\n", pkt.gyro[0], gyro.x, pkt.gyro[1], gyro.y, pkt.gyro[2], gyro.z); 
-		::printf("pos: %f %f %f\n", position.x, position.y, position.z); 
-		::printf("rand %d\n", rand()); 
-		::printf("\033[^H"); 
-		accel_body = Vector3f(0, 0, -9.82 + (rand() % 100) / 100.0f - 0.5); //Vector3f(pkt.accel[0], pkt.accel[1], pkt.accel[2]); 
-		gyro = Vector3f(pkt.gyro[0], pkt.gyro[1], pkt.gyro[2]); 
-		//printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
-		rcin_chan_count = 8; 
-		for(unsigned c = 0; c < 8; c++) rcin[c] = pkt.rcin[c]; 
-		position = Vector3f(pkt.pos[0], pkt.pos[1], pkt.pos[2]); 
-    	velocity_ef = Vector3f(pkt.vel[0], pkt.vel[1], pkt.vel[2]);
-	}	
-
-	//position.z = -0.5; 
-    //dcm.from_euler(pkt.euler[0], pkt.euler[1], pkt.euler[2]);
-
-	adjust_frame_time(1000);
-    sync_frame_time();
-	drain_control_socket(); 
 }
 
 /*
@@ -126,21 +109,57 @@ void TiltSim::update(const struct sitl_input &input){
     	send_state(input);
 		_packet_timeout = tnow + 10; 
 	}
-    recv_fdm(input);
 
-    // get wind vector setup
-    //update_wind(input);
+	client_packet pkt;
+	memset(&pkt, sizeof(pkt), 0); 
 
-    //Vector3f rot_accel;
-   	//_frame->calculate_forces(*this, input, rot_accel, accel_body);
+	if(sock.recv(&pkt, sizeof(pkt), 0) == sizeof(pkt)){
+		::printf("ax: %f\t%f\nay: %f\t%f\naz: %f\t%f\n", pkt.accel[0], accel_body.x, pkt.accel[1], accel_body.y, pkt.accel[2], accel_body.z); 
+		::printf("gx: %f\t%f\ngy: %f\t%f\ngz: %f\t%f\n", pkt.gyro[0], gyro.x, pkt.gyro[1], gyro.y, pkt.gyro[2], gyro.z); 
+		::printf("pos: %f %f %f\n", position.x, position.y, position.z); 
+		::printf("eu: %f %f %f\n", pkt.euler[0], pkt.euler[1], pkt.euler[2]); 
+		Vector3f a = dcm * accel_body; 	
+		::printf("accelef: %f %f %f\n", a.x, a.y, a.z); 
 
-    //update_dynamics(rot_accel);
+		::printf("\033[^H"); 
 
-    // update lat/lon/altitude
-    update_position();
+		if(_mode == MODE_CLIENT_SIM){
+			accel_body = Vector3f(pkt.accel[0], pkt.accel[1], pkt.accel[2]); 
+			gyro = Vector3f(pkt.gyro[0], pkt.gyro[1], pkt.gyro[2]); 
+			//printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
+			position = Vector3f(pkt.pos[0], pkt.pos[1], pkt.pos[2]); 
+			velocity_ef = Vector3f(pkt.vel[0], pkt.vel[1], pkt.vel[2]);
+		}
 
-    // update magnetic field
-    update_mag_field_bf();
+		rcin_chan_count = 8; 
+		for(unsigned c = 0; c < 8; c++) rcin[c] = pkt.rcin[c]; 
+	}	
+
+	adjust_frame_time(1000);
+    sync_frame_time();
+	drain_control_socket(); 
+
+	if(_mode == MODE_SERVER_SIM){
+		// get wind vector setup
+		update_wind(input);
+
+		Vector3f rot_accel;
+
+    	_frame->calculate_forces(*this, input, rot_accel, accel_body);
+
+		update_dynamics(rot_accel);
+
+		// update lat/lon/altitude
+		update_position();
+
+		// update magnetic field
+		update_mag_field_bf();
+	} else if(_mode == MODE_CLIENT_SIM){
+		update_position();
+
+		// update magnetic field
+		update_mag_field_bf();
+	}
 }
 
 } // namespace SITL
