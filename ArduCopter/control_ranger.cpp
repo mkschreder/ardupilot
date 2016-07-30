@@ -90,28 +90,30 @@ void Copter::control_ranger_run()
 	float rc_4 = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.001; 
 	float rc_5 = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.001; 
 
-	float ku = 10 + rc_4 * 35;  
-	float tu = 5 + rc_5 * 15; 
+	if(!is_zero(rc_5)){
+		float ku = 10 + rc_4 * 35;  
+		float tu = 5 + rc_5 * 15; 
 
-	float rc_vel_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.08; // 6.32
-	float rc_vel_i = 0;//constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 5.92 
-	float rc_vel_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 3.73 
-	
-	float rc_center_p = 0.6 * ku; 
-	float rc_center_i = (1.2 * ku) / tu; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
-	float rc_center_d = (0.6 * ku * tu) / 8; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+		float rc_vel_p = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.08; // 6.32
+		float rc_vel_i = 0;//constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 5.92 
+		float rc_vel_d = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; // 3.73 
+		
+		float rc_center_p = 0.6 * ku; 
+		float rc_center_i = 0.8; //(1.2 * ku) / tu; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
+		float rc_center_d = (0.6 * ku * tu) / 8; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 
-	//hal.console->printf("%f, %f, %f, %f, %f\n", ku, tu, rc_center_p, rc_center_i, rc_center_d); 
+		//hal.console->printf("%f, %f, %f, %f, %f\n", ku, tu, rc_center_p, rc_center_i, rc_center_d); 
 
-	range_avoid.set_vel_kP(rc_vel_p); 
-	range_avoid.set_vel_kI(rc_vel_i); 
-	range_avoid.set_vel_kD(rc_vel_d); 
-	
-	range_avoid.set_center_kP(rc_center_p); 
-	range_avoid.set_center_kI(rc_center_i); 
-	range_avoid.set_center_kD(rc_center_d); 
+		range_avoid.set_vel_kP(rc_vel_p); 
+		range_avoid.set_vel_kI(rc_vel_i); 
+		range_avoid.set_vel_kD(rc_vel_d); 
+		
+		range_avoid.set_center_kP(rc_center_p); 
+		range_avoid.set_center_kI(rc_center_i); 
+		range_avoid.set_center_kD(rc_center_d); 
+	}
 
-	rangefinders.update(G_Dt); 
+	rangefinders.update(1.0 / 400.0); 
 
 	if(althold_state == AltHold_Flying){
 		if(!logfile) {
@@ -120,7 +122,7 @@ void Copter::control_ranger_run()
 		}
 		range_avoid.input_desired_velocity_ms(-target_pitch / 4500.0, target_roll / 4500.0); 
 
-		range_avoid.update(G_Dt); 
+		range_avoid.update(1.0 / 400.0); 
 
 		/** BLACK BOX LOGGING HERE. Should not be in production! */
 		long long last_reading = rangefinders.last_update_millis(); 
@@ -147,7 +149,6 @@ void Copter::control_ranger_run()
 			f.pilot_roll = target_roll * 0.01; 
 			Vector3f pos_ef = ranger_nav.get_position_ef(); 
 			Vector3f vel = ranger_nav.get_velocity(); 
-			//Vector3f off = ranger_nav.get_center_target(); 
 			Vector3f accel = ins.get_accel(); 
 			Vector3f gyro = ins.get_gyro(); 
 			f.fx = flow.x; 

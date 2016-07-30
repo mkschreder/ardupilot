@@ -176,7 +176,8 @@ void RangerNav::update(float dt){
 	math::Vector<3> vel_ef = yaw_mat * math::Vector<3>(flow_rate.x, flow_rate.y, 0) * _altitude; 
 
 	// update position integral and altitude
-	_position += vel_ef * dt + math::Vector<3>(0, 0, _altitude); 
+	_position += vel_ef * dt; 
+	_position(2) = _altitude; 
 
 	// recalculate other variables once rangefinder readings arrive
 	long long last_reading = _rangefinder->last_update_millis(); 

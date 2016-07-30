@@ -103,7 +103,7 @@ void RangeAvoid::update(float dt){
 	math::Matrix<3, 3> yaw_mat(_yaw_mat); 
 	math::Matrix<3, 3> yaw_mat_inv = yaw_mat.inversed(); 
 
-	math::Vector<3> pos_ef(p.x, p.y, p.z); 
+	math::Vector<3> pos_ef(p.x, p.y, 0);  // reset z
 
 	// transform velocity from body frame to earth frame (we only use yaw)
 	math::Vector<3> input_ef = yaw_mat * math::Vector<3>(_desired_forward, _desired_right, 0.0); 
@@ -121,41 +121,44 @@ void RangeAvoid::update(float dt){
 		out_ef(0) = _pitch_center_pid.get_p(); 
 		out_ef(1) = _roll_center_pid.get_p(); 
 	} else {
-		/*
 		static bool reset_pitch = false, reset_roll = false; 
-		
+
+		// limit length of error to 2 meters. 
+		math::Vector<3> err = _target_pos_ef - pos_ef; 
+		// either if error is less than setpoint or if input pointing in opposite direction from error. 
+		if(err.length() < 2.0 || (err * input_ef) < 0){
+			_target_pos_ef += input_ef * dt * 2; 
+		}  	
+
+		// reset position instantly when pilot input goes to zero. 
 		if(is_zero(_desired_forward)){
 			if(reset_pitch){
-				target_pos.x = pos.x; 
-				//_pitch_center_pid.reset_I(); 
+				_target_pos_ef = pos_ef; 
 				reset_pitch = false; 
 			}
 		} else {
-			target_pos.x += _desired_forward * dt; 
 			reset_pitch = true; 
 		}
 		if(is_zero(_desired_right)){
 			if(reset_roll){
-				target_pos.y = pos.y; 
-				//_roll_center_pid.reset_I(); 
+				_target_pos_ef = pos_ef; 
 				reset_roll = false; 
 			}
 		} else {
-			target_pos.y += _desired_right * dt; 
 			reset_roll = true; 
 		}
-		*/
-	
-		_target_pos_ef += input_ef * dt; 
 
+		_target_pos_ef(2) = 0; 
+
+		math::Vector<3> err_ef = _target_pos_ef - pos_ef; 
 		//Vector3f center = _nav->get_center_target(); 
 		//target_pos.x += center.x * 4 * dt; 
 		//target_pos.y += center.y * 4 * dt; 
 
-		_pitch_center_pid.set_input_filter_all(constrain_float(_target_pos_ef(0) - pos_ef(0), -2.0, 2.0)); 
-		_roll_center_pid.set_input_filter_all(constrain_float(_target_pos_ef(1) - pos_ef(1), -2.0, 2.0)); 
+		_pitch_center_pid.set_input_filter_all(constrain_float(err_ef(0), -2.0, 2.0)); 
+		_roll_center_pid.set_input_filter_all(constrain_float(err_ef(1), -2.0, 2.0)); 
 
-		out_ef(0) = _pitch_center_pid.get_pid(); 
+		out_ef(0) = _pitch_center_pid.get_pid();
 		out_ef(1) = _roll_center_pid.get_pid(); 
 	}
 	//_pitch_center_pid.set_input_filter_all(target_pos.x - pos.x); 
@@ -175,7 +178,7 @@ void RangeAvoid::update(float dt){
 	//_output_roll = constrain_float(_roll_pid.get_pid(), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 
 	//hal.console->printf("c(%f %f) out(%f %f)\n", (double)center.x, (double)center.y, (double)_output_pitch, (double)_output_roll); 
-	hal.console->printf("YAW: %f, OUT(%f %f)\n", _ahrs->yaw, _output_pitch, _output_roll); 
+	//hal.console->printf("YAW: %f, OUT(%f %f)\n", _ahrs->yaw, _output_pitch, _output_roll); 
 	//hal.console->printf("%f %f -> %f %f - e - %f %f -> %f %f\n", _desired_forward, _desired_right, pos(0), pos(1), target_pos(0) - pos(0), target_pos(1) - pos(1), _output_pitch, _output_roll);  
 
 	//hal.console->printf("%f %f %f %f %f %f\n", _desired_forward, _desired_right, _pitch_center_pid.get_pid(), _roll_center_pid.get_pid(), _output_pitch, _output_roll); 
