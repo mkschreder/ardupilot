@@ -70,7 +70,7 @@ void TiltSim::send_state(const struct sitl_input &input){
 	pkt.euler[0] = r; pkt.euler[1] = p; pkt.euler[2] = y; 
 	pkt.pos[0] = position.x; pkt.pos[1] = position.y; pkt.pos[2] = position.z; 
 	pkt.vel[0] = velocity.x; pkt.vel[1] = velocity.y; pkt.vel[2] = velocity.z; 
-	pkt.acc[0] = accel_body.x; pkt.acc[1] = accel_body.y; pkt.acc[2] = accel_body.z; 
+	//pkt.acc[0] = accel_body.x; pkt.acc[1] = accel_body.y; pkt.acc[2] = accel_body.z; 
 
     sock.sendto(&pkt, sizeof(pkt), "127.0.0.1", 9002);
 }
@@ -113,8 +113,6 @@ void TiltSim::update(const struct sitl_input &input){
 	memset(&pkt, sizeof(pkt), 0); 
 
 	if(sock.recv(&pkt, sizeof(pkt), 0) == sizeof(pkt)){
-		//::printf("\033[H\033[2J"); 
-		/*
 		::printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
 		::printf("ax: %f\t%f\nay: %f\t%f\naz: %f\t%f\n", pkt.accel[0], accel_body.x, pkt.accel[1], accel_body.y, pkt.accel[2], accel_body.z); 
 		::printf("gx: %f\t%f\ngy: %f\t%f\ngz: %f\t%f\n", pkt.gyro[0], gyro.x, pkt.gyro[1], gyro.y, pkt.gyro[2], gyro.z); 
@@ -124,7 +122,8 @@ void TiltSim::update(const struct sitl_input &input){
 		::printf("eu: %f %f %f\n", pkt.euler[0], pkt.euler[1], pkt.euler[2]); 
 		Vector3f a = dcm * accel_body; 	
 		::printf("accelef: %f %f %f\n", a.x, a.y, a.z); 
-*/
+
+		::printf("\033[H"); 
 
 		if(_mode == MODE_CLIENT_SIM){
 			accel_body = Vector3f(pkt.accel[0], pkt.accel[1], pkt.accel[2]); 
@@ -138,6 +137,10 @@ void TiltSim::update(const struct sitl_input &input){
 		rcin_chan_count = 8; 
 		for(unsigned c = 0; c < 8; c++) rcin[c] = pkt.rcin[c]; 
 	}	
+
+	adjust_frame_time(1000);
+    sync_frame_time();
+	drain_control_socket(); 
 
 	if(_mode == MODE_SERVER_SIM){
 		// get wind vector setup
@@ -161,10 +164,6 @@ void TiltSim::update(const struct sitl_input &input){
 		// update magnetic field
 		update_mag_field_bf();
 	}
-
-	adjust_frame_time(1000);
-    sync_frame_time();
-	drain_control_socket(); 
 }
 
 } // namespace SITL

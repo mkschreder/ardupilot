@@ -52,7 +52,7 @@ private:
 		double pos[3]; 
 		double vel[3]; 
 		double euler[3]; 
-		double acc[3]; 
+		//double acc[3]; 
     };
 
 	// packets sent from tilt sim to us
