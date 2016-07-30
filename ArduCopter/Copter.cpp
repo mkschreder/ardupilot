@@ -19,6 +19,8 @@
 
 const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 
+AP_HAL::DebugConsole _debug_console; 
+
 /*
   constructor for main Copter class
  */
@@ -115,9 +117,14 @@ Copter::Copter(void) :
 #endif
     in_mavlink_delay(false),
     gcs_out_of_time(false),
-    param_loader(var_info)
+    param_loader(var_info),
+	rangefinders(hal.uartE),
+	ranger_nav(&ahrs, &rangefinders, &ins, &optflow, &barometer),
+	range_avoid(&ahrs, &ranger_nav)
 {
     memset(&current_loc, 0, sizeof(current_loc));
+
+	dbgConsole = &_debug_console; 
 
     // init sensor error logging flags
     sensor_health.baro = true;

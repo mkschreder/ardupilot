@@ -1,3 +1,41 @@
+#ArduPilot TILT Mod#
+
+ArduPilot for TILT drones. 
+
+Currently supported configurations: 
+
+	* Quadrotor with dynamically tilted motors for pitch using single servo (ptilt)
+
+How to build and install: 
+
+	BUILD: 
+
+	cd ArduCopter
+	make px4-v2-quad-ptilt
+
+	FLASH: 
+	make px4-v2-quad-ptilt-upload
+
+For tilt drones this firmware defines a new frame type that uses mixer
+AP\_MotorsQuadTilt which provides servo output. It also defines a new flight
+mode called stabilize\_ptilt which uses pitch input from the user to adjust
+roll and yaw, but does not pass the pitch input to the flight controller.
+Instead, the pitch input is processed in the motors mixer for the tilt frame
+and is used to drive the rotor pitch servo. 
+
+TILT Pro settings: 
+	ATC_RAT_PIT_P = 0.10
+	ATC_RAT_PIT_I = 0.12
+	ATC_RAT_PIT_D = 0.004
+	ATC_RAT_RLL_P = 0.10
+	ATC_RAT_RLL_I = 0.12
+	ATC_RAT_RLL_D = 0.004
+Parameters: 
+	
+	* TILT\_SERVO\_ON: 1/0. Sets servo on or off. If off, then servo will be always centered. (default: 1) 
+	* TILT\_SERVO\_CHANNEL: 1-X. Servo channel starting from 1 and going up to how many are supported. (default: maxmotors)
+	* TILT\_SERVO\_TRAVEL: travel for the servo in degrees. (default: 45). 
+
 #ArduPilot Project#
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ArduPilot/ardupilot?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)

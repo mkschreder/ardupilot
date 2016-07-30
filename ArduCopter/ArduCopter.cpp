@@ -285,6 +285,7 @@ void Copter::fast_loop()
     if (should_log(MASK_LOG_ANY)) {
         Log_Sensor_Health();
     }
+
 }
 
 // rc_loops - reads user input from transmitter/receiver

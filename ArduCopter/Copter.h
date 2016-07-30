@@ -89,6 +89,9 @@
 #include <AC_InputManager/AC_InputManager.h>        // Pilot input handling library
 #include <AC_InputManager/AC_InputManager_Heli.h>   // Heli specific pilot input handling library
 #include <AP_Button/AP_Button.h>
+#include <AP_RangeFinder/AP_RangeFinder_6DOF.h>
+
+#include "RangeAvoid.h"
 
 // Configuration
 #include "defines.h"
@@ -175,6 +178,8 @@ private:
     AP_Baro barometer;
     Compass compass;
     AP_InertialSensor ins;
+	
+	AP_HAL::BetterStream *dbgConsole; 
 
     RangeFinder rangefinder {serial_manager};
     struct {
@@ -202,6 +207,7 @@ private:
     // Optical flow sensor
 #if OPTFLOW == ENABLED
     OpticalFlow optflow{ahrs};
+	Vector2f _optflow_rate; 
 #endif
 
     // gnd speed limit required to observe optical flow sensor limits
@@ -313,6 +319,8 @@ private:
     // Motor Output
 #if FRAME_CONFIG == QUAD_FRAME
  #define MOTOR_CLASS AP_MotorsQuad
+#elif FRAME_CONFIG == QUAD_PTILT_FRAME
+ #define MOTOR_CLASS AP_MotorsQuadTilt
 #elif FRAME_CONFIG == TRI_FRAME
  #define MOTOR_CLASS AP_MotorsTri
 #elif FRAME_CONFIG == HEXA_FRAME
@@ -569,7 +577,11 @@ private:
     // setup the var_info table
     AP_Param param_loader;
 
-#if FRAME_CONFIG == HELI_FRAME
+	AP_RangeFinder_6DOF rangefinders; 
+	RangerNav ranger_nav; 
+	RangeAvoid range_avoid; 
+
+	#if FRAME_CONFIG == HELI_FRAME
     // Mode filter to reject RC Input glitches.  Filter size is 5, and it draws the 4th element, so it can reject 3 low glitches,
     // and 1 high glitch.  This is because any "off" glitches can be highly problematic for a helicopter running an ESC
     // governor.  Even a single "off" frame can cause the rotor to slow dramatically and take a long time to restart.
@@ -864,6 +876,8 @@ private:
     void sport_run();
     bool stabilize_init(bool ignore_checks);
     void stabilize_run();
+	bool control_ranger_init(bool ignore_checks); 
+	void control_ranger_run(); 
     void crash_check();
     void parachute_check();
     void parachute_release();

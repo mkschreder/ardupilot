@@ -50,7 +50,7 @@ static PX4::I2CDeviceManager i2c_mgr_instance;
 #define UARTC_DEFAULT_DEVICE "/dev/ttyS1"
 #define UARTD_DEFAULT_DEVICE "/dev/ttyS2"
 #define UARTE_DEFAULT_DEVICE "/dev/ttyS6"
-#define UARTF_DEFAULT_DEVICE "/dev/null"
+#define UARTF_DEFAULT_DEVICE "/dev/ttyS5"
 #elif defined(CONFIG_ARCH_BOARD_PX4FMU_V4)
 #define UARTA_DEFAULT_DEVICE "/dev/ttyACM0"
 #define UARTB_DEFAULT_DEVICE "/dev/ttyS3"

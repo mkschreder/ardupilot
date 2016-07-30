@@ -36,6 +36,11 @@ void Copter::althold_run()
 {
     AltHoldModeState althold_state;
     float takeoff_climb_rate = 0.0f;
+	
+	//int pilot_throttle = channel_throttle->get_control_in(); 
+	
+	//if(pilot_throttle < 2) {
+		
 
     // initialize vertical speeds and acceleration
     pos_control.set_speed_z(-g.pilot_velocity_z_max, g.pilot_velocity_z_max);

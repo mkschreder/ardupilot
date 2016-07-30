@@ -133,6 +133,9 @@ public:
     // set loop rate. Used to support loop rate as a parameter
     void                set_loop_rate(uint16_t loop_rate) { _loop_rate = loop_rate; }
     
+	// motor tilt pitch (will be sent to correct servo in subclassed motor class)
+	void 	set_motor_tilt_angle_pitch(float pitch) { _tilt_pitch = pitch; }
+
 protected:
     // output functions that should be overloaded by child classes
     virtual void        output_armed_stabilizing()=0;
@@ -169,6 +172,9 @@ protected:
     float               _roll_in;                   // desired roll control from attitude controllers, -1 ~ +1
     float               _pitch_in;                  // desired pitch control from attitude controller, -1 ~ +1
     float               _yaw_in;                    // desired yaw control from attitude controller, -1 ~ +1
+
+	float				_tilt_pitch; 				// desired motor tilt from attitude control (if supported)
+
     float               _throttle_in;               // last throttle input from set_throttle caller
     float               _throttle_avg_max;          // last throttle input from set_throttle_avg_max
     LowPassFilterFloat  _throttle_filter;           // throttle input filter

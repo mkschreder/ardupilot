@@ -20,13 +20,15 @@ DigitalLPF<T>::DigitalLPF() {
 // add a new raw value to the filter, retrieve the filtered result
 template <class T>
 T DigitalLPF<T>::apply(const T &sample, float cutoff_freq, float dt) {
-    if (cutoff_freq <= 0.0f || dt <= 0.0f) {
+	float rc = 1.0f/(M_2PI*cutoff_freq);
+	float d = (dt+rc); 
+
+    if (cutoff_freq <= 0.0f || dt <= 0.0f || is_zero(d)) {
         _output = sample;
         return _output;
     }
 
-    float rc = 1.0f/(M_2PI*cutoff_freq);
-    float alpha = constrain_float(dt/(dt+rc), 0.0f, 1.0f);
+    float alpha = constrain_float(dt/d, 0.0f, 1.0f);
     _output += (sample - _output) * alpha;
     return _output;
 }

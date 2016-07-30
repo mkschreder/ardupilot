@@ -86,7 +86,7 @@ void AP_MotorsMatrix::enable()
 void AP_MotorsMatrix::output_to_motors()
 {
     int8_t i;
-    int16_t motor_out[AP_MOTORS_MAX_NUM_MOTORS];    // final pwm values sent to the motor
+    int16_t __attribute__((unused)) motor_out[AP_MOTORS_MAX_NUM_MOTORS];    // final pwm values sent to the motor
 
     switch (_spool_mode) {
         case SHUT_DOWN:
@@ -120,14 +120,22 @@ void AP_MotorsMatrix::output_to_motors()
 
     // send output to each motor
     hal.rcout->cork();
-    for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
-        if (motor_enabled[i]) {
-            rc_write(i, motor_out[i]);
-        }
-    }
+
+	for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
+		if (motor_enabled[i]) {
+			rc_write(i, motor_out[i]);
+		}
+	}
+
+	// process servo output 
+	output_to_servos(); 
+
     hal.rcout->push();
 }
 
+void AP_MotorsMatrix::output_to_servos(){
+	// do nothing here, this function can be overridden
+}
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
 //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict

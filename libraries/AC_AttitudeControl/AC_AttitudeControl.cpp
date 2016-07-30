@@ -196,6 +196,12 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
     // calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
+	euler_pitch_angle_rad = 0; 
+#endif
+
     // ensure smoothing gain can not cause overshoot
     smoothing_gain = constrain_float(smoothing_gain,1.0f,1/_dt);
 
@@ -245,6 +251,12 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle
 
     // calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
+
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
+	euler_pitch_angle_rad = 0; 
+#endif
 
     // ensure smoothing gain can not cause overshoot
     smoothing_gain = constrain_float(smoothing_gain,1.0f,1/_dt);
@@ -303,6 +315,12 @@ void AC_AttitudeControl::input_euler_rate_roll_pitch_yaw(float euler_roll_rate_c
     // calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
+	euler_pitch_angle_rad = 0; 
+#endif
+
     if (_rate_bf_ff_enabled & _use_ff_and_input_shaping) {
         // translate the roll pitch and yaw acceleration limits to the euler axis
         Vector3f euler_accel = euler_accel_limit(_attitude_target_euler_angle, Vector3f(get_accel_roll_max_radss(), get_accel_pitch_max_radss(), get_accel_yaw_max_radss()));
@@ -341,6 +359,15 @@ void AC_AttitudeControl::input_rate_bf_roll_pitch_yaw(float roll_rate_bf_cds, fl
     float roll_rate_rads = radians(roll_rate_bf_cds*0.01f);
     float pitch_rate_rads = radians(pitch_rate_bf_cds*0.01f);
     float yaw_rate_rads = radians(yaw_rate_bf_cds*0.01f);
+
+#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
+	// TODO: revisit this because it is rate control here. 
+	//_motor_tilt_pitch_ang = euler_pitch_rate_cds * 0.01f; 
+	//euler_pitch_rate_rads = 0; 
+	// for now disable tilt completely in rate mode so that rate mode works but without tilt
+	_motor_tilt_pitch_ang = 0; 
+#endif
 
     // calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);

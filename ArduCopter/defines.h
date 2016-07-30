@@ -82,6 +82,7 @@ enum aux_sw_func {
 #define OCTA_QUAD_FRAME 7
 #define SINGLE_FRAME 8
 #define COAX_FRAME 9
+#define QUAD_PTILT_FRAME 10 
 
 // HIL enumerations
 #define HIL_MODE_DISABLED               0
@@ -106,6 +107,7 @@ enum control_mode_t {
     BRAKE =        17,  // full-brake using inertial/GPS system, no pilot input
     THROW =        18,  // throw to launch mode using inertial/GPS system, no pilot input
     AVOID_ADSB =   19,  // automatic avoidance of obstacles in the macro scale - e.g. full-sized aircraft
+	RANGER =       21   // special tilt ranger mode where we use optical flow and rangefinders for precision flight
 };
 
 enum mode_reason_t {

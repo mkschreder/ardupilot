@@ -47,6 +47,9 @@ public:
     // reset_filter - input filter will be reset to the next value provided to set_input()
     void        reset_filter();
 
+	// reset everything
+	void 		reset(); 
+
     // load gain from eeprom
     void        load_gains();
 
