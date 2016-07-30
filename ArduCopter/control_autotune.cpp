@@ -266,7 +266,6 @@ void Copter::autotune_run()
     pos_control.set_speed_z(-g.pilot_velocity_z_max, g.pilot_velocity_z_max);
     pos_control.set_accel_z(g.pilot_accel_z);
 
-	printf("TUNESTART!\n"); 
     // if not auto armed or motor interlock not enabled set throttle to zero and exit immediately
     // this should not actually be possible because of the autotune_init() checks
     if (!motors.armed() || !ap.auto_armed || !motors.get_interlock()) {
@@ -276,7 +275,6 @@ void Copter::autotune_run()
         return;
     }
 
-	printf("TUNING!\n"); 
     // apply SIMPLE mode transform to pilot inputs
     update_simple_mode();
 
