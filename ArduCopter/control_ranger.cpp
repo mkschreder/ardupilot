@@ -1,5 +1,7 @@
 #include "Copter.h"
 
+//TODO: make work for sitl
+#if 0
 // same controller as the stabi
 bool Copter::control_ranger_init(bool ignore_checks){
 	hal.console->printf("Ranger mode init.\n"); 
@@ -395,3 +397,4 @@ void Copter::control_ranger_run()
     }
 
 }
+#endif

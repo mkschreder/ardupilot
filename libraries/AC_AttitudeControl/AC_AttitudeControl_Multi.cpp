@@ -190,12 +190,13 @@ float AC_AttitudeControl_Multi::get_throttle_boosted(float throttle_in)
     // inverted_factor is 1 for tilt angles below 60 degrees
     // inverted_factor reduces from 1 to 0 for tilt angles between 60 and 90 degrees
 
-#if FRAME_CONFIG == QUAD_PTILT_FRAME
+// TODO: readd properly
+//#if FRAME_CONFIG == QUAD_PTILT_FRAME
 	// throttle compensation for tilted motors is body pitch plus motor tilt angle
-	float cos_pitch = cos(_ahrs.pitch + radians(_motor_tilt_pitch_ang)); 
-#else
+//	float cos_pitch = cos(_ahrs.pitch + radians(_motor_tilt_pitch_ang)); 
+//#else
 	float cos_pitch = _ahrs.cos_pitch(); 
-#endif
+//#endif
 
     float cos_tilt = cos_pitch * _ahrs.cos_roll();
     float inverted_factor = constrain_float(2.0f*cos_tilt, 0.0f, 1.0f);

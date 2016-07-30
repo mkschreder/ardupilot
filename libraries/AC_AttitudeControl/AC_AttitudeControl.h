@@ -350,9 +350,7 @@ protected:
 
 protected:
 	// motor tilt
-#if FRAME_CONFIG == QUAD_PTILT_FRAME
 	float _motor_tilt_pitch_ang; 
-#endif
 
     /*
       state of control monitoring

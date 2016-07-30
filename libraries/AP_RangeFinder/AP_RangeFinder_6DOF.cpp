@@ -10,6 +10,9 @@ License: GPLv3
 #include <stdio.h>
 #include "AP_RangeFinder_6DOF.h"
 
+// TODO: make work for sitl
+#if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+
 #define DOF_SENSOR_FRONT 1
 #define DOF_SENSOR_BACK 0
 #define DOF_SENSOR_RIGHT 3
@@ -95,3 +98,5 @@ void AP_RangeFinder_6DOF::update(float dt){
 		b = _port->read(); 
 	}
 }
+
+#endif

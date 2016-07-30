@@ -15,6 +15,9 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// TODO: make work for sitl
+#if 0
+
 #include "RangerNav.h"
 #include <AP_HAL/AP_HAL.h>
 
@@ -240,4 +243,4 @@ Vector3f RangerNav::get_position_ef() {
 		0
 	);*/
 }
-
+#endif

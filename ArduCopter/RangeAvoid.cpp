@@ -15,6 +15,9 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// TODO: make work for sitl
+#if 0
+
 #include "RangeAvoid.h"
 
 #define RANGE_MAX_RESPONSE 45.0
@@ -192,3 +195,4 @@ float RangeAvoid::get_desired_pitch_angle(){
 float RangeAvoid::get_desired_roll_angle(){
 	return _output_roll;  
 }
+#endif

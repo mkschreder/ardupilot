@@ -117,10 +117,10 @@ Copter::Copter(void) :
 #endif
     in_mavlink_delay(false),
     gcs_out_of_time(false),
-    param_loader(var_info),
-	rangefinders(hal.uartE),
-	ranger_nav(&ahrs, &rangefinders, &ins, &optflow, &barometer),
-	range_avoid(&ahrs, &ranger_nav)
+    param_loader(var_info)
+	//rangefinders(hal.uartE),
+	//ranger_nav(&ahrs, &rangefinders, &ins, &optflow, &barometer),
+	//range_avoid(&ahrs, &ranger_nav)
 {
     memset(&current_loc, 0, sizeof(current_loc));
 

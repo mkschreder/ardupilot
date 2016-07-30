@@ -17,6 +17,9 @@
 
 #pragma once
 
+// TODO: make work for sitl
+#if 0
+
 #include <AC_PID/AC_PID.h>
 #include <AP_RangeFinder/AP_RangeFinder_6DOF.h>
 #include <AP_OpticalFlow/OpticalFlow.h>
@@ -91,3 +94,4 @@ private:
 	float _baro_zero_altitude; 
 	long long _last_range_reading; 
 }; 
+#endif

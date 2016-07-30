@@ -17,6 +17,9 @@
 
 #pragma once
 
+// TODO: make work for sitl
+#if 0
+
 #include <AC_PID/AC_PID.h>
 #include <AP_RangeFinder/AP_RangeFinder_6DOF.h>
 #include <AP_OpticalFlow/OpticalFlow.h>
@@ -68,3 +71,5 @@ private:
 	float _baro_zero_altitude; 
 	Vector3f _velocity; 
 }; 
+
+#endif

@@ -281,7 +281,8 @@ void Copter::init_ardupilot()
     ins.set_raw_logging(should_log(MASK_LOG_IMU_RAW));
     ins.set_dataflash(&DataFlash);
 
-	rangefinders.init(); 
+	// TODO: make work for sitl
+	//rangefinders.init(); 
 
     cliSerial->print("\nReady to FLY ");
 

@@ -196,7 +196,8 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
     // calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
-#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// TODO: make work for sitl
+#if 0
 	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
 	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
 	euler_pitch_angle_rad = 0; 
@@ -252,7 +253,8 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle
     // calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
-#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// TODO: make work for silt
+#if 0
 	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
 	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
 	euler_pitch_angle_rad = 0; 
@@ -315,7 +317,8 @@ void AC_AttitudeControl::input_euler_rate_roll_pitch_yaw(float euler_roll_rate_c
     // calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
-#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// TODO: make work for sitl
+#if 0 
 	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
 	_motor_tilt_pitch_ang = euler_pitch_angle_cd * 0.01f; 
 	euler_pitch_angle_rad = 0; 
@@ -360,7 +363,8 @@ void AC_AttitudeControl::input_rate_bf_roll_pitch_yaw(float roll_rate_bf_cds, fl
     float pitch_rate_rads = radians(pitch_rate_bf_cds*0.01f);
     float yaw_rate_rads = radians(yaw_rate_bf_cds*0.01f);
 
-#if FRAME_CONFIG == QUAD_PTILT_FRAME
+	// TODO: make work for sitl
+#if 0
 	// for tilted frame we save the input pitch target and set our target to 0 (stabilized pitch)
 	// TODO: revisit this because it is rate control here. 
 	//_motor_tilt_pitch_ang = euler_pitch_rate_cds * 0.01f; 
