@@ -55,7 +55,7 @@ bool Copter::pre_arm_checks(bool display_failure)
         if (display_failure) {
             gcs_send_text(MAV_SEVERITY_CRITICAL,"PreArm: Motor Interlock Enabled");
         }
-        return false;
+        //return false;
     }
 
     // exit immediately if we've already successfully performed the pre-arm check
@@ -612,7 +612,7 @@ bool Copter::arm_checks(bool display_failure, bool arming_from_gcs)
     // if we are using motor interlock switch and it's enabled, fail to arm
     if (ap.using_interlock && motors.get_interlock()){
         gcs_send_text(MAV_SEVERITY_CRITICAL,"Arm: Motor Interlock Enabled");
-        return false;
+        //return false;
     }
 
     // if we are not using Emergency Stop switch option, force Estop false to ensure motors
