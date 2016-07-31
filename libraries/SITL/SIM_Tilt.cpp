@@ -32,7 +32,7 @@ TiltSim::TiltSim(const char *home_str, const char *frame_str) :
     sock(true)
 {
 	_frame = NULL; 
-	_mode = MODE_SERVER_SIM; 
+	_mode = MODE_CLIENT_SIM; 
 	_packet_timeout = 0; 
 	if(frame_str){
 		printf("Looking up frame %s\n", frame_str); 
@@ -48,10 +48,13 @@ TiltSim::TiltSim(const char *home_str, const char *frame_str) :
     // try to bind to a specific port so that if we restart ArduPilot
     // TiltSim keeps sending us packets. Not strictly necessary but
     // useful for debugging
-    sock.bind("127.0.0.1", 9003);
+    sock.bind("127.0.0.1", 9005);
 
     sock.reuseaddress();
     sock.set_blocking(false);
+
+	update_position();
+	update_mag_field_bf();
 }
 
 void TiltSim::send_state(const struct sitl_input &input){
@@ -70,7 +73,8 @@ void TiltSim::send_state(const struct sitl_input &input){
 	pkt.euler[0] = r; pkt.euler[1] = p; pkt.euler[2] = y; 
 	pkt.pos[0] = position.x; pkt.pos[1] = position.y; pkt.pos[2] = position.z; 
 	pkt.vel[0] = velocity.x; pkt.vel[1] = velocity.y; pkt.vel[2] = velocity.z; 
-	//pkt.acc[0] = accel_body.x; pkt.acc[1] = accel_body.y; pkt.acc[2] = accel_body.z; 
+	pkt.acc[0] = accel_body.x; pkt.acc[1] = accel_body.y; pkt.acc[2] = accel_body.z; 
+	pkt.mag[0] = mag_bf.x; pkt.mag[1] = mag_bf.y; pkt.mag[2] = mag_bf.z; 
 
     sock.sendto(&pkt, sizeof(pkt), "127.0.0.1", 9002);
 }
@@ -112,27 +116,36 @@ void TiltSim::update(const struct sitl_input &input){
 	client_packet pkt;
 	memset(&pkt, sizeof(pkt), 0); 
 
-	if(sock.recv(&pkt, sizeof(pkt), 0) == sizeof(pkt)){
+	static long long _calls_since = 0; 
+	_calls_since++; 
+	if(sock.recv(&pkt, sizeof(pkt), 1) == sizeof(pkt)){
+		if(_mode == MODE_CLIENT_SIM){
+			accel_body = Vector3f(pkt.accel[0], pkt.accel[1], pkt.accel[2]); 
+			gyro = Vector3f(pkt.gyro[0], pkt.gyro[1], pkt.gyro[2]); 
+			location.lat = pkt.loc[0]; 
+			location.lng = pkt.loc[1]; 
+			location.alt = pkt.loc[2]; 
+			mag_bf = Vector3f(pkt.mag[0], pkt.mag[1], pkt.mag[2]); 
+			//printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
+			position = Vector3f(pkt.pos[0], pkt.pos[1], pkt.pos[2]); 
+			velocity_ef = Vector3f(pkt.vel[0], pkt.vel[1], pkt.vel[2]);
+		}
+
+		if(pkt.id != (_last_packet_id + 1)) ::printf("DROPPED %d packets!\n", pkt.id - _last_packet_id); 
+		else ::printf("packet %d\n", pkt.id); 
+		_last_packet_id = pkt.id; 
+		::printf("calls since last packet: %d\n", _calls_since); 
+		_calls_since = 0; 
 		::printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
 		::printf("ax: %f\t%f\nay: %f\t%f\naz: %f\t%f\n", pkt.accel[0], accel_body.x, pkt.accel[1], accel_body.y, pkt.accel[2], accel_body.z); 
 		::printf("gx: %f\t%f\ngy: %f\t%f\ngz: %f\t%f\n", pkt.gyro[0], gyro.x, pkt.gyro[1], gyro.y, pkt.gyro[2], gyro.z); 
 		::printf("pos: %f %f %f\n", position.x, position.y, position.z); 
 		::printf("vel: %f %f %f\n", velocity_ef.x, velocity_ef.y, velocity_ef.z); 
-		::printf("loc: %f %f %f\n", location.lng, location.lat, location.alt); 
+		::printf("loc: %d %d %d\n", location.lng, location.lat, location.alt); 
+		::printf("loc_or: %f %f %f\n", pkt.loc[0], pkt.loc[1], pkt.loc[2]); 
 		::printf("eu: %f %f %f\n", pkt.euler[0], pkt.euler[1], pkt.euler[2]); 
 		Vector3f a = dcm * accel_body; 	
 		::printf("accelef: %f %f %f\n", a.x, a.y, a.z); 
-
-		::printf("\033[H"); 
-
-		if(_mode == MODE_CLIENT_SIM){
-			accel_body = Vector3f(pkt.accel[0], pkt.accel[1], pkt.accel[2]); 
-			gyro = Vector3f(pkt.gyro[0], pkt.gyro[1], pkt.gyro[2]); 
-			//printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
-			position = Vector3f(pkt.pos[0], pkt.pos[1], pkt.pos[2]); 
-			velocity_ef = Vector3f(pkt.vel[0], pkt.vel[1], pkt.vel[2]);
-			//dcm.from_euler(pkt.euler[0], pkt.euler[1], pkt.euler[2]); 
-		}
 
 		rcin_chan_count = 8; 
 		for(unsigned c = 0; c < 8; c++) rcin[c] = pkt.rcin[c]; 
@@ -162,7 +175,7 @@ void TiltSim::update(const struct sitl_input &input){
 		update_position();
 
 		// update magnetic field
-		update_mag_field_bf();
+		//update_mag_field_bf();
 	}
 }
 

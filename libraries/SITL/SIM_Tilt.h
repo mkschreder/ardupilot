@@ -49,21 +49,25 @@ private:
     struct server_packet {
 		uint8_t mode; 
 		int16_t servo[8]; 
-		double pos[3]; 
-		double vel[3]; 
-		double euler[3]; 
-		//double acc[3]; 
+		float pos[3]; 
+		float vel[3]; 
+		float euler[3]; 
+		float acc[3]; 
+		float mag[3]; 
     };
 
 	// packets sent from tilt sim to us
     struct client_packet {
-        double timestamp;
-		double gyro[3]; 
-		double accel[3]; 
-		double euler[3]; 
-		double pos[3]; 
-		double vel[3]; 
-		double rcin[8]; 
+		uint32_t id; 
+        float timestamp;
+		float gyro[3]; 
+		float accel[3]; 
+		float euler[3]; 
+		float pos[3]; 
+		float vel[3]; 
+		float rcin[8]; 
+		int32_t loc[3]; 
+		float mag[3]; 
     };
 
     void send_state(const struct sitl_input &input);
@@ -74,6 +78,7 @@ private:
     SocketAPM sock;
 	uint8_t _mode; 
     Frame *_frame;
+	uint32_t _last_packet_id; 
 };
 
 } // namespace SITL
