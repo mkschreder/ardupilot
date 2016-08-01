@@ -75,10 +75,12 @@ private:
 	void drain_control_socket(); 
 	
 	long long _packet_timeout; 
-    SocketAPM sock;
+    //SocketAPM sock;
 	uint8_t _mode; 
     Frame *_frame;
 	uint32_t _last_packet_id; 
+
+	char *_shmout, *_shmin; 
 };
 
 } // namespace SITL

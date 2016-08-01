@@ -19,6 +19,9 @@
 
 #include "SIM_Tilt.h"
 
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <stdio.h>
 
 #include <AP_HAL/AP_HAL.h>
@@ -28,15 +31,15 @@ extern const AP_HAL::HAL& hal;
 namespace SITL {
 
 TiltSim::TiltSim(const char *home_str, const char *frame_str) :
-    Aircraft(home_str, frame_str),
-    sock(true)
+    Aircraft(home_str, frame_str)
+    //sock(true)
 {
 	_frame = NULL; 
 	_mode = MODE_CLIENT_SIM; 
 	_packet_timeout = 0; 
 	if(frame_str){
 		printf("Looking up frame %s\n", frame_str); 
-		_frame = Frame::find_frame("+");
+		_frame = Frame::find_frame("x");
 		if (_frame == NULL) {
 			printf("Frame '%s' not found", frame_str);
 			exit(1);
@@ -48,13 +51,18 @@ TiltSim::TiltSim(const char *home_str, const char *frame_str) :
     // try to bind to a specific port so that if we restart ArduPilot
     // TiltSim keeps sending us packets. Not strictly necessary but
     // useful for debugging
-    sock.bind("127.0.0.1", 9005);
+    //sock.bind("127.0.0.1", 9005);
 
-    sock.reuseaddress();
-    sock.set_blocking(false);
+    //sock.reuseaddress();
+    //sock.set_blocking(false);
 
-	update_position();
-	update_mag_field_bf();
+	int out = shmget(9003, sizeof(struct server_packet), IPC_CREAT | 0666); 
+	if(out < 0) perror("shmget"); 
+	int in = shmget(9005, sizeof(struct client_packet), IPC_CREAT | 0666); 
+	if(in < 0) perror("shmget"); 
+	
+	_shmin = (char*)shmat(in, NULL, 0); 
+	_shmout = (char*)shmat(out, NULL, 0); 
 }
 
 void TiltSim::send_state(const struct sitl_input &input){
@@ -76,13 +84,15 @@ void TiltSim::send_state(const struct sitl_input &input){
 	pkt.acc[0] = accel_body.x; pkt.acc[1] = accel_body.y; pkt.acc[2] = accel_body.z; 
 	pkt.mag[0] = mag_bf.x; pkt.mag[1] = mag_bf.y; pkt.mag[2] = mag_bf.z; 
 
-    sock.sendto(&pkt, sizeof(pkt), "127.0.0.1", 9002);
+	memcpy(_shmout, &pkt, sizeof(pkt)); 
+    //sock.sendto(&pkt, sizeof(pkt), "127.0.0.1", 9002);
 }
 
 #include <errno.h>
 
 void TiltSim::drain_control_socket()
 {
+	/*
     const uint16_t buflen = 1024;
     char buf[buflen];
     ssize_t received;
@@ -97,6 +107,7 @@ void TiltSim::drain_control_socket()
             // fprintf(stderr, "received from control socket: %s\n", buf);
         }
     } while (received > 0);
+	*/
 }
 
 void TiltSim::recv_fdm(const struct sitl_input &input){
@@ -118,7 +129,10 @@ void TiltSim::update(const struct sitl_input &input){
 
 	static long long _calls_since = 0; 
 	_calls_since++; 
-	if(sock.recv(&pkt, sizeof(pkt), 1) == sizeof(pkt)){
+	//int rc = sock.recv(&pkt, sizeof(pkt), 0); 
+	//if(rc == sizeof(pkt)){
+	memcpy(&pkt, _shmin, sizeof(client_packet)); 
+
 		if(_mode == MODE_CLIENT_SIM){
 			accel_body = Vector3f(pkt.accel[0], pkt.accel[1], pkt.accel[2]); 
 			gyro = Vector3f(pkt.gyro[0], pkt.gyro[1], pkt.gyro[2]); 
@@ -139,21 +153,18 @@ void TiltSim::update(const struct sitl_input &input){
 		::printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
 		::printf("ax: %f\t%f\nay: %f\t%f\naz: %f\t%f\n", pkt.accel[0], accel_body.x, pkt.accel[1], accel_body.y, pkt.accel[2], accel_body.z); 
 		::printf("gx: %f\t%f\ngy: %f\t%f\ngz: %f\t%f\n", pkt.gyro[0], gyro.x, pkt.gyro[1], gyro.y, pkt.gyro[2], gyro.z); 
+		::printf("mx: %f\nmy: %f\nmz: %f\n", pkt.mag[0], pkt.mag[1], pkt.mag[2]); 
 		::printf("pos: %f %f %f\n", position.x, position.y, position.z); 
 		::printf("vel: %f %f %f\n", velocity_ef.x, velocity_ef.y, velocity_ef.z); 
-		::printf("loc: %d %d %d\n", location.lng, location.lat, location.alt); 
-		::printf("loc_or: %f %f %f\n", pkt.loc[0], pkt.loc[1], pkt.loc[2]); 
+		::printf("loc: %d %d %d\n", location.lat, location.lng, location.alt); 
 		::printf("eu: %f %f %f\n", pkt.euler[0], pkt.euler[1], pkt.euler[2]); 
 		Vector3f a = dcm * accel_body; 	
 		::printf("accelef: %f %f %f\n", a.x, a.y, a.z); 
 
 		rcin_chan_count = 8; 
 		for(unsigned c = 0; c < 8; c++) rcin[c] = pkt.rcin[c]; 
-	}	
 
 	adjust_frame_time(1000);
-    sync_frame_time();
-	drain_control_socket(); 
 
 	if(_mode == MODE_SERVER_SIM){
 		// get wind vector setup
@@ -170,13 +181,27 @@ void TiltSim::update(const struct sitl_input &input){
 
 		// update magnetic field
 		update_mag_field_bf();
-	} else if(_mode == MODE_CLIENT_SIM){
-		// update lat/lon/altitude
-		update_position();
 
-		// update magnetic field
-		//update_mag_field_bf();
+		update_time();
+	} else if(_mode == MODE_CLIENT_SIM){
+		update_wind(input); 
+
+		// velocity relative to air mass, in earth frame
+		velocity_air_ef = velocity_ef - wind_ef;
+		
+		// velocity relative to airmass in body frame
+		velocity_air_bf = dcm.transposed() * velocity_air_ef;
+		
+		// airspeed 
+		airspeed = velocity_air_ef.length();
+
+		// airspeed as seen by a fwd pitot tube (limited to 120m/s)
+		airspeed_pitot = constrain_float(velocity_air_bf * Vector3f(1, 0, 0), 0, 120);
+
+		update_time();
 	}
+
+	drain_control_socket(); 
 }
 
 } // namespace SITL
