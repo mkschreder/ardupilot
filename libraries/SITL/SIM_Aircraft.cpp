@@ -141,16 +141,6 @@ void Aircraft::update_position(void)
 
     location.alt  = home.alt - position.z*100.0f;
 
-    // we only advance time if it hasn't been advanced already by the
-    // backend
-    if (last_time_us == time_now_us) {
-        time_now_us += frame_time_us;
-    }
-    last_time_us = time_now_us;
-    if (use_time_sync) {
-        sync_frame_time();
-    }
-
 #if 0
     // logging of raw sitl data
     Vector3f accel_ef = dcm * accel_body;
@@ -160,6 +150,18 @@ void Aircraft::update_position(void)
                                            accel_ef.x, accel_ef.y, accel_ef.z,
                                            position.x, position.y, position.z);
 #endif
+}
+
+void Aircraft::update_time(){
+    // we only advance time if it hasn't been advanced already by the
+    // backend
+    if (last_time_us == time_now_us) {
+        time_now_us += frame_time_us;
+    }
+    last_time_us = time_now_us;
+    if (use_time_sync) {
+        sync_frame_time();
+    }
 }
 
 /*

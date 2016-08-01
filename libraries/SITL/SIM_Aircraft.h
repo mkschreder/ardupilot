@@ -166,6 +166,7 @@ protected:
 
     /* update location from position */
     void update_position(void);
+	void update_time(); 
 
     /* update body frame magnetic field */
     void update_mag_field_bf(void);
