@@ -15,9 +15,6 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// TODO: make work for sitl
-#if 0
-
 #include "RangeAvoid.h"
 
 #define RANGE_MAX_RESPONSE 45.0
@@ -103,14 +100,15 @@ void RangeAvoid::update(float dt){
         { -_ahrs->sin_yaw(), _ahrs->cos_yaw(), 0.0 },
 		{ 0, 0, 1}
 	}; 
-	math::Matrix<3, 3> yaw_mat(_yaw_mat); 
-	math::Matrix<3, 3> yaw_mat_inv = yaw_mat.inversed(); 
+	matrix::Matrix<float, 3, 3> yaw_mat((float*)_yaw_mat); 
+	//matrix::Matrix<float, 3, 3> yaw_mat_inv = matrix::SquareMatrix<float, 3>(yaw_mat).inversed(); 
+	matrix::Matrix<float, 3, 3> yaw_mat_inv = yaw_mat.inversed(); 
 
-	math::Vector<3> pos_ef(p.x, p.y, 0);  // reset z
+	matrix::Vector3<float> pos_ef(p.x, p.y, 0.0f);  // reset z
 
 	// transform velocity from body frame to earth frame (we only use yaw)
-	math::Vector<3> input_ef = yaw_mat * math::Vector<3>(_desired_forward, _desired_right, 0.0); 
-	math::Vector<3> out_ef; 
+	matrix::Vector<float, 3> input_ef = yaw_mat * matrix::Vector3<float>(_desired_forward, _desired_right, 0.0); 
+	matrix::Vector<float, 3> out_ef; 
 
 	if(!_nav->have_position()){
 		_target_pos_ef = pos_ef; 
@@ -127,9 +125,9 @@ void RangeAvoid::update(float dt){
 		static bool reset_pitch = false, reset_roll = false; 
 
 		// limit length of error to 2 meters. 
-		math::Vector<3> err = _target_pos_ef - pos_ef; 
+		matrix::Vector<float, 3> err = _target_pos_ef - pos_ef; 
 		// either if error is less than setpoint or if input pointing in opposite direction from error. 
-		if(err.length() < 2.0 || (err * input_ef) < 0){
+		if(err.length() < 2.0 || (err.dot(input_ef)) < 0){
 			_target_pos_ef += input_ef * dt * 2; 
 		}  	
 
@@ -153,7 +151,7 @@ void RangeAvoid::update(float dt){
 
 		_target_pos_ef(2) = 0; 
 
-		math::Vector<3> err_ef = _target_pos_ef - pos_ef; 
+		matrix::Vector<float, 3> err_ef = _target_pos_ef - pos_ef; 
 		//Vector3f center = _nav->get_center_target(); 
 		//target_pos.x += center.x * 4 * dt; 
 		//target_pos.y += center.y * 4 * dt; 
@@ -172,7 +170,7 @@ void RangeAvoid::update(float dt){
 	//_roll_pid.set_input_filter_all(_desired_right - _roll_center_pid.get_pid() - vel.y); 
 	//_roll_pid.set_input_filter_all(desired_vel.y - vel.y); 
 
-	math::Vector<3> out = yaw_mat_inv * out_ef; 
+	matrix::Vector<float, 3> out = yaw_mat_inv * out_ef; 
 
 	_output_pitch = -constrain_float(out(0), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
 	_output_roll = constrain_float(out(1), -RANGE_MAX_RESPONSE, RANGE_MAX_RESPONSE);
@@ -195,4 +193,3 @@ float RangeAvoid::get_desired_pitch_angle(){
 float RangeAvoid::get_desired_roll_angle(){
 	return _output_roll;  
 }
-#endif

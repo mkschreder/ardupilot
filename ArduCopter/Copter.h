@@ -578,9 +578,9 @@ private:
     AP_Param param_loader;
 
 	// TODO: make work for sitl
-	//AP_RangeFinder_6DOF rangefinders; 
-	//RangerNav ranger_nav; 
-	//RangeAvoid range_avoid; 
+	AP_RangeFinder_6DOF rangefinders; 
+	RangerNav ranger_nav; 
+	RangeAvoid range_avoid; 
 
 	#if FRAME_CONFIG == HELI_FRAME
     // Mode filter to reject RC Input glitches.  Filter size is 5, and it draws the 4th element, so it can reject 3 low glitches,

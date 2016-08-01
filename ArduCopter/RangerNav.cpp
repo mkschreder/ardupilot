@@ -15,16 +15,13 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// TODO: make work for sitl
-#if 0
-
 #include "RangerNav.h"
 #include <AP_HAL/AP_HAL.h>
 
 extern const AP_HAL::HAL& hal;
 
 RangerNav::PVPredictor::PVPredictor(){
-	_kf.set_state_covariance_matrix(math::Matrix<4, 4>((const float[4][4]){
+	_kf.set_state_covariance_matrix(matrix::Matrix<float, 4, 4>((const float[4][4]){
 		{0.01, 0.0, 0.0, 0.0},
 		{0.0, 0.01, 0.0, 0.0},
 		{0.0, 0.0, 0.001, 0.0},
@@ -47,7 +44,7 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 		_lp_pos.apply(_median_pos.get(), dt), 
 		_lp_neg.apply(_median_neg.get(), dt)
 	}; 
-	math::Vector<3> zk(vfb); 
+	matrix::Vector<float, 3> zk(vfb); 
 	_zk = zk; 
 
 	if(flow_quality > 0) {
@@ -57,13 +54,13 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 			{0.0, 0.0, 1.0, 0.0}, 	// compute next front from integration of velocity and sensor reading
 			{0.0, 0.0, 0.0, 1.0} 	// compute next back from integration of velocity and sensor reading
 		}; 
-		_kf.set_state_transition_matrix(math::Matrix<4,4>(F)); 
+		_kf.set_state_transition_matrix(matrix::Matrix<float, 4,4>(F)); 
 		const float H[3][4] = {
 			{0.0, 1.0, 0.0, 0.0}, 	// velocity is x1
 			{0.0, 0.0, 1.0, 0.0}, 	// front is x2
 			{0.0, 0.0, 0.0, 1.0} 	// back is x3
 		}; 
-		_kf.set_state_input_matrix(math::Matrix<3, 4>(H)); 
+		_kf.set_state_input_matrix(matrix::Matrix<float, 3, 4>(H)); 
 
 		// when quality = 255 -> 0 noise, when quality 0 -> 0.4 noise. 
 		// trust flow more if quality is better
@@ -74,7 +71,7 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 			{0.0, 0.2, 0.0},
 			{0.0, 0.0, 0.2}
 		}; 
-		_kf.set_sensor_covariance_matrix(math::Matrix<3, 3>(R)); 
+		_kf.set_sensor_covariance_matrix(matrix::Matrix<float, 3, 3>(R)); 
 	} else {
 		const float F[4][4] = {
 			{0.0, 0.0, 1.0, -1.0},
@@ -82,29 +79,29 @@ void RangerNav::PVPredictor::input(float flow_vel, float flow_quality, float ran
 			{0.0, 0.0, 1.0, 0.0},
 			{0.0, 0.0, 0.0, 1.0}
 		}; 
-		_kf.set_state_transition_matrix(math::Matrix<4,4>(F)); 
+		_kf.set_state_transition_matrix(matrix::Matrix<float, 4,4>(F)); 
 		const float H[3][4] = {
 			{0.0, 0.0, 0.0, 0.0},
 			{0.0, 0.0, 1.0, 0.0},
 			{0.0, 0.0, 0.0, 1.0}
 		}; 
-		_kf.set_state_input_matrix(math::Matrix<3, 4>(H)); 
+		_kf.set_state_input_matrix(matrix::Matrix<float, 3, 4>(H)); 
 		// trust rangefinders more if we have no velocity estimate
 		const float R[3][3] = {
 			{1.0, 0.0, 0.0},
-			{0.0, zk(1) * 0.1, 0.0},
-			{0.0, 0.0, zk(2) * 0.1}
+			{0.0, zk(1) * 0.1f, 0.0},
+			{0.0, 0.0, zk(2) * 0.1f}
 		}; 
-		_kf.set_sensor_covariance_matrix(math::Matrix<3, 3>(R)); 
+		_kf.set_sensor_covariance_matrix(matrix::Matrix<float, 3, 3>(R)); 
 	}
 
 	// store current reading as last before updating
-	math::Vector<4> prev = _kf.get_prediction(); 
+	matrix::Vector<float, 4> prev = _kf.get_prediction(); 
 
-	_kf.update(zk, math::Vector<4>()); 
+	_kf.update(zk, matrix::Vector<float, 4>()); 
 
 	// calculate velocity of the drone from center point estimate
-	math::Vector<4> p = _kf.get_prediction(); 
+	matrix::Vector<float, 4> p = _kf.get_prediction(); 
 	if(!is_zero(dt)){
 		_velocity = (p(0) - prev(0)) / dt; 
 		//_velocity = _lp_velocity.apply(p(0) * 2 + ((p(0) - prev(0)) / dt), dt);  
@@ -157,10 +154,10 @@ void RangerNav::update(float dt){
 	/*
 	// sample code to compute linear acceleration
 	// Something seems off 
-	math::Matrix<3, 3> R; 
+	matrix::Matrix<float, 3, 3> R; 
 	R.from_euler(-_ahrs->roll, _ahrs->pitch, _ahrs->yaw); 
-	math::Vector<3> g(0, 0, -9.82); 
-	math::Vector<3> a = R.inversed() * math::Vector<3>(accel.y, accel.x, accel.z); 
+	matrix::Vector<float, 3> g(0, 0, -9.82); 
+	matrix::Vector<float, 3> a = R.inversed() * matrix::Vector<float, 3>(accel.y, accel.x, accel.z); 
 	hal.console->printf("RPY: %f %f %f, A: %f %f %f, ACC: %f %f %f\n", _ahrs->roll, _ahrs->pitch, _ahrs->yaw, a(0), a(1), a(2), accel.x, accel.y, accel.z); 
 	*/
 
@@ -173,10 +170,10 @@ void RangerNav::update(float dt){
 		{ -_ahrs->sin_yaw(), _ahrs->cos_yaw(), 	0.0},
 		{ 0.0, 0.0, 1.0 }
 	}; 
-	math::Matrix<3, 3> yaw_mat(_yaw_mat); 
+	matrix::Matrix<float, 3, 3> yaw_mat(_yaw_mat); 
 
 	Vector2f flow_rate = _optflow->flowRate(); 
-	math::Vector<3> vel_ef = yaw_mat * math::Vector<3>(flow_rate.x, flow_rate.y, 0) * _altitude; 
+	matrix::Vector<float, 3> vel_ef = yaw_mat * matrix::Vector3<float>(flow_rate.x, flow_rate.y, 0) * _altitude; 
 
 	// update position integral and altitude
 	_position += vel_ef * dt; 
@@ -203,8 +200,8 @@ void RangerNav::update(float dt){
 			constrain_float(right, 0, 0.5), 
 			constrain_float(left, 0, 0.5), rdt); 
 	
-		//math::Vector<3> zk = _pv_x.get_last_input(); 	
-		//math::Vector<4> p = _pv_x.get_last_prediction(); 
+		//matrix::Vector<3> zk = _pv_x.get_last_input(); 	
+		//matrix::Vector<4> p = _pv_x.get_last_prediction(); 
 
 		//hal.console->printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",
 		//		vel.x, front, back, _pv_x.get_last_velocity_prediction(), p(0), p(1), p(2), p(3), altitude); 
@@ -243,4 +240,3 @@ Vector3f RangerNav::get_position_ef() {
 		0
 	);*/
 }
-#endif

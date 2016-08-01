@@ -43,16 +43,16 @@ void Copter::read_rangefinder(void)
 
     rangefinder_state.alt_healthy = ((rangefinder.status() == RangeFinder::RangeFinder_Good) && (rangefinder.range_valid_count() >= RANGEFINDER_HEALTH_MAX));
 
-    int16_t temp_alt = rangefinder.distance_cm();
-	// TODO: make work for sitl
-#if 0
+    //int16_t temp_alt = rangefinder.distance_cm();
+
+	// TODO: change this when we add a new class of sensors for multidirectional rangefinders
 	rangefinder_state.alt_healthy = rangefinders.have_bottom(); 
 
 	float front, back, right, left, bottom, top; 
 	rangefinders.get_readings_m(&front, &back, &right, &left, &bottom, &top); 
 
     int16_t temp_alt = bottom * 100; //rangefinders.get_bottom_clearance_cm();
-#endif
+
  #if RANGEFINDER_TILT_CORRECTION == ENABLED
     // correct alt for angle of the rangefinder
     temp_alt = (float)temp_alt * MAX(0.707f, ahrs.get_rotation_body_to_ned().c.z);

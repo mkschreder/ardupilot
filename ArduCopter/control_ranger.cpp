@@ -1,7 +1,5 @@
 #include "Copter.h"
 
-//TODO: make work for sitl
-#if 0
 // same controller as the stabi
 bool Copter::control_ranger_init(bool ignore_checks){
 	hal.console->printf("Ranger mode init.\n"); 
@@ -118,15 +116,17 @@ void Copter::control_ranger_run()
 	rangefinders.update(1.0 / 400.0); 
 
 	if(althold_state == AltHold_Flying){
-		if(!logfile) {
+		/*if(!logfile) {
 			logfile = fopen("/fs/microsd/log.hex", "a"); 
 			if(logfile) printf("Opened logfile\n"); 
 		}
+		*/
 		range_avoid.input_desired_velocity_ms(-target_pitch / 4500.0, target_roll / 4500.0); 
 
 		range_avoid.update(1.0 / 400.0); 
 
 		/** BLACK BOX LOGGING HERE. Should not be in production! */
+		/*
 		long long last_reading = rangefinders.last_update_millis(); 
 		static long long _last_range_reading = 0;  
 		if(_last_range_reading != last_reading){	
@@ -171,16 +171,19 @@ void Copter::control_ranger_run()
 
 			//hal.console->printf("%d %f %f %f\n", (int) althold_state, (double)f.bottom, (double)target_pitch * 0.01, (double)target_roll * 0.01); 
 		}
+		*/
 
 		target_pitch = constrain_float(range_avoid.get_desired_pitch_angle(), -45.0f, 45.0f) * 100.0f; 
 		target_roll = constrain_float(range_avoid.get_desired_roll_angle(), -45.0f, 45.0f) * 100.0f; 
 
 	} else {
+		/*
 		if(logfile){
 			fclose(logfile); 
 			printf("Closed logfile\n"); 
 			logfile = 0; 
 		}
+		*/
 		range_avoid.reset(); 
 	}
 
@@ -268,7 +271,7 @@ void Copter::control_ranger_run()
 	//target_pitch = 0; 
 #endif
 
-    //attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, bodyTilt * 100, target_yaw_rate, get_smoothing_gain());
+    //attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, bodyTilt * 100, target_yaw_rate, get_smoothing_gain());
 
 	// compensate throttle for motor tilt (throttle is 0-1.0 here)
 	// compensating for rc input pitch + current body pitch because body may pitch as well and we need to adjust thrust for that as well 
@@ -309,7 +312,7 @@ void Copter::control_ranger_run()
 #if FRAME_CONFIG == HELI_FRAME    
         // helicopters are capable of flying even with the motor stopped, therefore we will attempt to keep flying
         // call attitude controller
-        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
         // force descent rate and call position controller
         pos_control.set_alt_target_from_climb_rate(-abs(g.land_speed), G_Dt, false);
@@ -317,7 +320,7 @@ void Copter::control_ranger_run()
 #else
         // Multicopters do not stabilize roll/pitch/yaw when motor are stopped
         attitude_control.set_throttle_out_unstabilized(0,true,g.throttle_filt);
-        pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-throttle_average);
+        pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-motors.get_throttle_hover());
 #endif
         break;
 
@@ -327,13 +330,13 @@ void Copter::control_ranger_run()
 #if FRAME_CONFIG == HELI_FRAME
         // Helicopters always stabilize roll/pitch/yaw
         attitude_control.set_yaw_target_to_current_heading();
-        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
         attitude_control.set_throttle_out(0,false,g.throttle_filt);
 #else
         // Multicopters do not stabilize roll/pitch/yaw when not auto-armed (i.e. on the ground, pilot has never raised throttle)
         attitude_control.set_throttle_out_unstabilized(0,true,g.throttle_filt);
 #endif
-        pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-throttle_average);
+        pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-motors.get_throttle_hover());
         break;
 
     case AltHold_Takeoff:
@@ -354,7 +357,7 @@ void Copter::control_ranger_run()
         motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 
         // call attitude controller
-        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
         // call position controller
         pos_control.set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
@@ -368,7 +371,7 @@ void Copter::control_ranger_run()
         attitude_control.set_yaw_target_to_current_heading();
 #endif
         // call attitude controller
-        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
         attitude_control.set_throttle_out(get_throttle_pre_takeoff(channel_throttle->get_control_in()),false,g.throttle_filt);
         // set motors to spin-when-armed if throttle at zero, otherwise full range
         if (ap.throttle_zero) {
@@ -376,13 +379,13 @@ void Copter::control_ranger_run()
         } else {
             motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
         }
-        pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-throttle_average);
+        pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-motors.get_throttle_hover());
         break;
 
     case AltHold_Flying:
         motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
         // call attitude controller
-        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw_smooth(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
+        attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
         // adjust climb rate using rangefinder
         if (rangefinder_alt_ok()) {
@@ -397,4 +400,3 @@ void Copter::control_ranger_run()
     }
 
 }
-#endif

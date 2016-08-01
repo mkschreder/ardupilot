@@ -103,11 +103,11 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
             success = throw_init(ignore_checks);
             break;
 			//TODO: make work for sitl
-	#if 0	
+
 		case RANGER: 
 			success = control_ranger_init(ignore_checks); 
 			break; 
-#endif
+
         case AVOID_ADSB:
             success = avoid_adsb_init(ignore_checks);
             break;
@@ -235,12 +235,11 @@ void Copter::update_flight_mode()
         case THROW:
             throw_run();
             break;
-// TODO: make work for sitl
-	#if 0
+
 		case RANGER:
 			control_ranger_run(); 
 			break; 
-#endif
+
         case AVOID_ADSB:
             avoid_adsb_run();
             break;

@@ -17,65 +17,67 @@
 
 #pragma once
 
-#include <mathlib/mathlib.h>
+#include <matrix/matrix/Matrix.hpp>
+#include <matrix/matrix/SquareMatrix.hpp>
+#include <matrix/matrix/Vector.hpp>
 
 template<unsigned int M, unsigned int N>
 class KalmanFilter {
 public: 
 	KalmanFilter(){
-		F.identity(); 
-		B.zero(); 
-		H.zero(); 
-		P.identity(); 
-		R.identity(); 
-		Q.identity(); 
-		xk.zero(); 
+		F.setIdentity(); 
+		B.setZero(); 
+		H.setZero(); 
+		P.setIdentity(); 
+		R.setIdentity(); 
+		Q.setIdentity(); 
+		xk.setZero(); 
 	}
-	void update(const math::Vector<M> &zk, const math::Vector<N> &uk){
+	void update(const matrix::Vector<float, M> &zk, const matrix::Vector<float, N> &uk){
 		// predict
 		xk = F * xk + B * uk; 
 		P = F * P * F.transposed() + Q; 
 
 		// observe
-		math::Vector<M> innovation = zk - H * xk; 
-		math::Matrix<M, M> innovation_cov = H * P * H.transposed() + R; 
+		matrix::Vector<float, M> innovation = zk - H * xk; 
+		matrix::Matrix<float, M, M> innovation_cov = H * P * H.transposed() + R; 
 
 		// update
-		math::Matrix<N, M> K = P * H.transposed() * innovation_cov.inversed(); 
+		matrix::Matrix<float, N, M> K = P * H.transposed() * innovation_cov.inversed(); 
 		xk = xk + K * innovation; 
 		P = P - K * H * P; 
 	}
-	void set_state_transition_matrix(const math::Matrix<N, N> &mat){
+	void set_state_transition_matrix(const matrix::Matrix<float, N, N> &mat){
 		F = mat; 
 	}
-	void set_sensor_covariance_matrix(const math::Matrix<M, M> &mat){
+	void set_sensor_covariance_matrix(const matrix::Matrix<float, M, M> &mat){
 		R = mat; 
 	}
-	void set_state_covariance_matrix(const math::Matrix<N, N> &mat){
+	void set_state_covariance_matrix(const matrix::Matrix<float, N, N> &mat){
 		Q = mat; 
 	}
-	void set_state_input_matrix(const math::Matrix<M, N> &mat){
+	void set_state_input_matrix(const matrix::Matrix<float, M, N> &mat){
 		H = mat; 
 	}
-	const math::Vector<N> &get_prediction() const {
+	const matrix::Vector<float, N> &get_prediction() const {
 		return xk; 
 	}
 private: 
 	// state transition matrix
-	math::Matrix<N, N> F; 
+	matrix::Matrix<float, N, N> F; 
 	// external forces matrix
-	math::Matrix<N, N> B;
+	matrix::Matrix<float, N, N> B;
 	// input vector to state matrix 
-	math::Matrix<M, N> H;
+	matrix::Matrix<float, M, N> H;
 	// sensor noise
-	math::Matrix<M, M> R; 
+	matrix::Matrix<float, M, M> R; 
 	// process noise 
-	math::Matrix<N, N> Q; 
+	matrix::Matrix<float, N, N> Q; 
 
 	// prediction error matrix
-	math::Matrix<N, N> P;  
+	matrix::Matrix<float, N, N> P;  
 
 	// filter state 
-	math::Vector<N> xk; 
+	matrix::Vector<float, N> xk; 
 }; 
 
