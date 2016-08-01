@@ -13,10 +13,7 @@ License: GPLv3
 #include "RangeFinder.h"
 #include "RangeFinder_Backend.h"
 
-// TODO: make work for sitl
-#if CONFIG_HAL_BOARD != HAL_BOARD_SITL
-
-#include <mathlib/mathlib.h>
+#include <matrix/matrix/math.hpp>
 
 class AP_RangeFinder_6DOF {
 public: 
@@ -50,5 +47,4 @@ private:
 	float _rates[6]; 
 	int32_t _prev_readings[6]; 
 }; 
-#endif
 

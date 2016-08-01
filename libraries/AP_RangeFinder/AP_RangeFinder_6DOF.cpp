@@ -10,9 +10,6 @@ License: GPLv3
 #include <stdio.h>
 #include "AP_RangeFinder_6DOF.h"
 
-// TODO: make work for sitl
-#if CONFIG_HAL_BOARD != HAL_BOARD_SITL
-
 #define DOF_SENSOR_FRONT 1
 #define DOF_SENSOR_BACK 0
 #define DOF_SENSOR_RIGHT 3
@@ -23,7 +20,11 @@ License: GPLv3
 #define DOF_SENSOR_MAX_RANGE 3
 #define DOF_SENSOR_NO_READING -1
 
+#include <AP_HAL/AP_HAL.h>
+extern const AP_HAL::HAL& hal;
+
 void AP_RangeFinder_6DOF::init(){
+	hal.console->printf("Initializing 6DOF rangefinder\n"); 
 	_port->begin(57600); 
 }
 
@@ -99,4 +100,3 @@ void AP_RangeFinder_6DOF::update(float dt){
 	}
 }
 
-#endif
