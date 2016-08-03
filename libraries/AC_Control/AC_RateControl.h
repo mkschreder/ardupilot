@@ -26,7 +26,9 @@
 #include <AC_PID/AC_PID.h>
 #include <AC_PID/AC_P.h>
 
-class AC_RateControl {
+#include "AC_Controller.h"
+
+class AC_RateControl : public AC_Controller {
 public: 
 	AC_RateControl( const AP_AHRS &ahrs,
 					const AP_Vehicle::MultiCopter &aparm,
@@ -38,7 +40,6 @@ public:
 
 	void update(float dt); 
 private: 
-	AC_PID _pid_x, _pid_y, _pid_z; 
 	const AP_AHRS &_ahrs; 
 	AP_Motors &_motors; 
 	Vector3f _target_rate; 

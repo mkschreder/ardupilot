@@ -28,7 +28,7 @@
 
 #include "AC_RateControl.h"
 
-class AC_AngleControl {
+class AC_AngleControl : public AC_Controller {
 public: 
 	AC_AngleControl( const AP_AHRS &ahrs,
 					const AP_Vehicle::MultiCopter &aparm,
@@ -37,13 +37,12 @@ public:
 	void input_roll_angle(float angle); 
 	void input_pitch_angle(float angle); 
 	void input_yaw_angle(float angle); 
-	void input_yaw_angle_rate(float rate); 
+	void input_yaw_rate(float rate); 
 	void input_throttle(float thr); 
 
 	void update(float dt); 
 private: 
 	AC_RateControl &_rate_control; 
-	AC_PID _pid_x, _pid_y, _pid_z; 
 	const AP_AHRS &_ahrs; 
 	Vector3f _target_angle; 
 	float _yaw_rate; 

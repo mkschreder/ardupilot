@@ -21,9 +21,6 @@
 AC_RateControl::AC_RateControl( const AP_AHRS &ahrs,
 					const AP_Vehicle::MultiCopter &aparm,
 					AP_Motors& motors) :
-		_pid_x(0.8, 0.01, 0.005, 1.0, 1.0, 1.0f/400.0f),  
-		_pid_y(1.0, 0.01, 0.01, 1.0, 1.0, 1.0f/400.0f),  
-		_pid_z(1.0, 0, 0.01, 1.0, 1.0, 1.0f/400.0f),  
 		_ahrs(ahrs), 
         _motors(motors)
 {

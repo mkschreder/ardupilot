@@ -147,6 +147,10 @@ public:
     // cross product
     Vector3<T> operator %(const Vector3<T> &v) const;
 
+    Vector3<T> cross(const Vector3<T> &v) const {
+		return *this % v; 
+	}
+
     // computes the angle between this vector and another vector
     float angle(const Vector3<T> &v2) const;
 
