@@ -37,17 +37,37 @@ FILE *logfile = 0;
 void Copter::control_ranger_run()
 {
     float target_roll, target_pitch;
-    float target_yaw_rate;
+    float target_yaw, throttle;
 
-    // if not armed set throttle to zero and exit immediately
-    if (!motors.armed() || ap.throttle_zero || !motors.get_interlock()) {
-        motors.set_desired_spool_state(AP_Motors::DESIRED_SPIN_WHEN_ARMED);
-        attitude_control.set_throttle_out_unstabilized(0,true,g.throttle_filt);
-        return;
-    }
+	attitude_control.enable(false); 
 
     motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
+	
+    get_pilot_desired_angle_rates(channel_roll->get_control_in(), channel_pitch->get_control_in(), channel_yaw->get_control_in(), target_roll, target_pitch, target_yaw);
 
+	target_roll = channel_roll->get_control_in() / 4500.0f; 
+	target_pitch = channel_pitch->get_control_in() / 4500.0f; 
+	target_yaw = channel_yaw->get_control_in() / 4500.0f; 
+	throttle = channel_throttle->get_control_in() / 1000.0f; 
+
+	//::printf("%f %f %f %f\n", target_roll, target_pitch, target_yaw, throttle); 
+	/*
+	_rate_control.input_roll_rate(target_roll);
+	_rate_control.input_pitch_rate(target_pitch); 
+	_rate_control.input_yaw_rate(target_yaw); 
+	_rate_control.input_throttle(throttle); 
+	_rate_control.update(G_Dt); 
+	*/
+
+	_angle_control.input_roll_angle(radians(target_roll * 45.0));
+	_angle_control.input_pitch_angle(radians(target_pitch * 45.0)); 
+	_angle_control.input_yaw_angle_rate(radians(target_yaw * 45.0)); 
+	_angle_control.input_throttle(throttle); 
+
+	_angle_control.update(G_Dt); 
+	_rate_control.update(G_Dt); 
+
+#if 0
     // apply SIMPLE mode transform to pilot inputs
     update_simple_mode();
 
@@ -82,7 +102,7 @@ void Copter::control_ranger_run()
 
     // get pilot's desired throttle
     //pilot_throttle_scaled = get_pilot_desired_throttle(channel_throttle->get_control_in());
-
+#if 0 
 	//Vector2f velocity = optflow.bodyRate(); 
 	//Vector2f flow_rate = optflow.flowRate(); 
 	// INKO_TILT: here we have to feed pilot rc control 0 because we will then apply rc control to the servo directly. 
@@ -102,7 +122,7 @@ void Copter::control_ranger_run()
 		float rc_center_i = 0.8; //(1.2 * ku) / tu; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
 		float rc_center_d = (0.6 * ku * tu) / 8; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
 
-		//hal.console->printf("%f, %f, %f, %f, %f\n", ku, tu, rc_center_p, rc_center_i, rc_center_d); 
+		::printf("%f, %f, %f, %f, %f\n", ku, tu, rc_center_p, rc_center_i, rc_center_d); 
 
 		range_avoid.set_vel_kP(rc_vel_p); 
 		range_avoid.set_vel_kI(rc_vel_i); 
@@ -113,8 +133,7 @@ void Copter::control_ranger_run()
 		range_avoid.set_center_kD(rc_center_d); 
 	}
 
-	rangefinders.update(1.0 / 400.0); 
-
+	::printf("state %d\n", althold_state); 
 	if(althold_state == AltHold_Flying){
 		/*if(!logfile) {
 			logfile = fopen("/fs/microsd/log.hex", "a"); 
@@ -187,64 +206,6 @@ void Copter::control_ranger_run()
 		range_avoid.reset(); 
 	}
 
-/*	
-	float center_offset = range_avoid.get_center_offset().x; 
-	float front, back, right, left, bottom, top; 
-	rangefinders.get_raw_readings_cm(&front, &back, &right, &left, &bottom, &top); 
-
-	dbgConsole->printf("%f, %f, %f, %f\n", rangefinders.get_center_point_offset().x * 0.01, center_offset, range_avoid.get_velocity().x, rangefinders.get_velocity_forward() * 0.01); 
-	*/
-	//dbgConsole->printf("%f, %f, %f\n", front, back, rangefinders.get_front_clearance_cm()); 
-	/*
-	dbgConsole->printf("%d, ", AP_HAL::millis()); 
-	float front, back, left, right, bottom, top; 
-	rangefinders.get_raw_readings_cm(&front, &back, &left, &right, &bottom, &top); 
-	// 2
-	dbgConsole->printf("%f, %f, ", front, back); 
-	Vector3f accel, gyro; 
-	accel = ins.get_accel(); gyro = ins.get_gyro(); 
-	// 4
-	dbgConsole->printf("%f, %f, %f, ", accel.x, accel.y, accel.z); 
-	// 7
-	dbgConsole->printf("%f, ", ahrs.pitch_sensor / 100.0); 
-	dbgConsole->printf("\n"); 
-*/
-	/*
-	dbgConsole->printf("%d, ", AP_HAL::millis()); 
-	float front, back, left, right, bottom, top; 
-	rangefinders.get_raw_readings_cm(&front, &back, &left, &right, &bottom, &top); 
-	// 2
-	dbgConsole->printf("%f, %f, %f, %f, %f, ", front, back, left, right, bottom); 
-	// 7
-	dbgConsole->printf("%f, %f, %f, %f, %f, ", rangefinders.get_front_clearance_cm(), rangefinders.get_back_clearance_cm(),
-		rangefinders.get_left_clearance_cm(), rangefinders.get_right_clearance_cm(), rangefinders.get_bottom_clearance_cm()); 
-	Vector3f accel, gyro; 
-	accel = ins.get_accel(); gyro = ins.get_gyro(); 
-	// 12
-	dbgConsole->printf("%f, %f, %f, %f, %f, %f, ", accel.x, accel.y, accel.z, gyro.x, gyro.y, gyro.z); 
-	// 18
-	dbgConsole->printf("%f, %f, %f, ", ahrs.yaw_sensor / 100.0, ahrs.pitch_sensor / 100.0, ahrs.roll_sensor / 100.0); 
-	// 21
-	dbgConsole->printf("%f, %f ", _optflow_rate.x, _optflow_rate.y); 
-	dbgConsole->printf("\n"); 
-	*/
-	/*
-		"%f %f %f %f %f ", 
-		"%f %f %f %f %f\n", AP_HAL::millis(), 
-			
-			(double)rc_p, (double)rc_i, (double)rc_d, 
-			(double)range_avoid.get_desired_pitch_angle(), (double)range_avoid.get_desired_roll_angle(), 
-			(double)range_avoid.get_filtered_flow().x, (double)range_avoid.get_filtered_flow().y, 
-			(double)-_optflow_rate.x, (double)_optflow_rate.y, 
-			(double)(rangefinders.get_bottom_clearance_cm() * 0.01f)); 
-	*/
-	//hal.console->printf("Y: %f, P: %f, R: %f, kP: %f, kI: %f, kD: %f, BOTTOM: %f, FRONT: %f, BACK %f, LEFT: %f, RIGHT: %f, PC: %f, RC: %f\n", 
-	//				target_yaw_rate, target_pitch, target_roll, rc_p, rc_i, rc_d, range_bottom, range_front, range_back, range_left, range_right, caPitchComp, caRollComp); 
-	//hal.console->printf("FR: %f, BK: %f, comp: %f, tp: %f, np: %f, rc: %f, nroll: %f\n", range_front, range_back, pitComp, target_pitch, npitch, target_roll, rllComp); 
-
-	// compensate yaw and roll
-	//cliSerial->printf("target_yaw: %f, target_pitch: %f, target_roll: %f, ", target_yaw_rate, target_pitch, target_roll); 
-	
 #if FRAME_CONFIG == QUAD_PTILT_FRAME
 	float cosAngle = cos(radians(target_pitch * 0.01)); 
 
@@ -281,7 +242,8 @@ void Copter::control_ranger_run()
 	// disable throttle compensation for now because we are using altitude hold below
 	//float compPitch = constrain_float(abs(ahrs.pitch_sensor * 0.01 + target_pitch * 0.01), 0, 45.0); 
 	//pilot_throttle_scaled = pilot_throttle_scaled / cos(radians(compPitch)); 
-	
+#endif
+
 	// ===========================================================
 	// Run altitude hold logic here
 
@@ -382,7 +344,7 @@ void Copter::control_ranger_run()
         pos_control.relax_alt_hold_controllers(get_throttle_pre_takeoff(channel_throttle->get_control_in())-motors.get_throttle_hover());
         break;
 
-    case AltHold_Flying:
+    case AltHold_Flying: {
         motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
         // call attitude controller
         attitude_control.input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
@@ -392,11 +354,23 @@ void Copter::control_ranger_run()
             // if rangefinder is ok, use surface tracking
             target_climb_rate = get_surface_tracking_climb_rate(target_climb_rate, pos_control.get_alt_target(), G_Dt);
         }
-
+/*		
+		static AC_PID _pid_z(0.7, 0.1, 0.01, 2.0, 1.0, 1.0/400.0); 
+		static float _target_rate = 0; 
+    	float pilot_throttle_scaled = get_pilot_desired_throttle(channel_throttle->get_control_in());
+		if(pilot_throttle_scaled < 0.4) _target_rate = fmax(_target_rate - G_Dt, 0.0f); 
+		if(pilot_throttle_scaled > 0.6) _target_rate = fmin(_target_rate + G_Dt, 1.0f); 
+		Vector3f vel = inertial_nav.get_velocity() * 0.01f; 
+		_pid_z.set_input_filter_all(_target_rate - vel.z); 	
+		float th = 0.5 + constrain_float(_pid_z.get_pid(), -0.5f, 0.5f); 
+		
+		::printf("vel: %f targ: %f th: %f, err: %f\n", vel.z, _target_rate, th, _target_rate - vel.z); 
+    	attitude_control.set_throttle_out(th, true, g.throttle_filt);
+*/
         // call position controller
-        pos_control.set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
-        pos_control.update_z_controller();
-        break;
+        //pos_control.set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
+        //pos_control.update_z_controller();
+        break; }
     }
-
+#endif
 }
