@@ -49,21 +49,66 @@ void Copter::control_ranger_run()
 	target_pitch = channel_pitch->get_control_in() / 4500.0f; 
 	target_yaw = channel_yaw->get_control_in() / 4500.0f; 
 	throttle = channel_throttle->get_control_in() / 1000.0f; 
+	
+	float rc_4 = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.001; 
+	float rc_5 = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.001; 
 
-	//::printf("%f %f %f %f\n", target_roll, target_pitch, target_yaw, throttle); 
-	/*
+	float ku = rc_4 * 4.0;  
+	float tu = rc_5 * 10.0f; 
+
+	if(is_zero(tu)) tu = 0.01; 
+
+	float kp = 0.6 * ku; 
+	float ki = (1.2 * ku) / tu; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.01; 
+	float kd = (0.6 * ku * tu) / 8; //constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.008; 
+
+	::printf("ku/tu: %f %f, pid: %f %f %f\n", ku, tu, kp, ki, kd); 
+
+	_rate_control.set_tuning(
+		Vector3f(0.6, 0.865, 0.103), 
+		Vector3f(0.6, 0.865, 0.103),
+		Vector3f(1.0, 0, 0.01)
+	); 
+
+#if 0
 	_rate_control.input_roll_rate(target_roll);
 	_rate_control.input_pitch_rate(target_pitch); 
 	_rate_control.input_yaw_rate(target_yaw); 
 	_rate_control.input_throttle(throttle); 
 	_rate_control.update(G_Dt); 
-	*/
-
+#endif
+	// ku = 0.756, tu = 5.85
+	_angle_control.set_tuning(
+		Vector3f(0.453, 0.155, 0.331), 
+		Vector3f(0.453, 0.155, 0.331),
+		Vector3f(1.0, 0, 0.01)
+	); 
+#if 0
 	_angle_control.input_roll_angle(radians(target_roll * 45.0));
 	_angle_control.input_pitch_angle(radians(target_pitch * 45.0)); 
-	_angle_control.input_yaw_angle_rate(radians(target_yaw * 45.0)); 
+	_angle_control.input_yaw_rate(radians(target_yaw * 45.0)); 
 	_angle_control.input_throttle(throttle); 
+#endif
+	// ku 0.35, tu: 7.37
+	// throttle: ku 0.8, tu: 2.0
+	_velocity_control.set_tuning(
+		//Vector3f(0.213, 0.057, 0.196), 
+		Vector3f(kp, ki, kd), 
+		Vector3f(kp, ki, kd),
+		Vector3f(0.48, 0.48, 0.12)
+	); 
 
+	// convert throttle into velocity
+	throttle -= 0.5; 
+	if(throttle > -0.1f && throttle < 0.1f) throttle = 0; 
+
+	_velocity_control.input_x_velocity(target_pitch * 10.0); 
+	_velocity_control.input_y_velocity(target_roll * 10.0); 
+	_velocity_control.input_z_velocity(throttle * 4.0); 
+
+	_velocity_control.input_yaw_rate(target_yaw); 
+
+	_velocity_control.update(G_Dt); 
 	_angle_control.update(G_Dt); 
 	_rate_control.update(G_Dt); 
 
