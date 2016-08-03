@@ -18,15 +18,16 @@
 #pragma once
 
 #include <AC_PID/AC_PID.h>
-#include <AP_RangeFinder/AP_RangeFinder_6DOF.h>
+#include <AP_RangeScanner/AP_RangeScanner_6DOF.h>
 #include <AP_OpticalFlow/OpticalFlow.h>
+#include <AP_InertialNav/AP_InertialNav.h>     // Inertial Navigation library
 #include "RangerNav.h"
 
 #include <matrix/matrix/Matrix.hpp>
 
 class RangeAvoid {
 public: 
-	RangeAvoid(AP_AHRS *ahrs, RangerNav *_nav); 
+	RangeAvoid(AP_AHRS *ahrs, RangerNav *_nav, AP_InertialNav *inav); 
 
 	void set_vel_kP(float kp); 
 	void set_vel_kI(float ki); 
@@ -55,6 +56,7 @@ private:
 
 	RangerNav *_nav; 
 	AP_AHRS *_ahrs; 
+	AP_InertialNav *_inav; 
 
 	AC_PID _pitch_pid, _roll_pid; 
 	AC_PID _pitch_center_pid, _roll_center_pid; 

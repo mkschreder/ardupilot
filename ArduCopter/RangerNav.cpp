@@ -121,7 +121,7 @@ float RangerNav::PVPredictor::get_last_offset_prediction(){
 	return -_kf.get_prediction()(0); 
 }
 
-RangerNav::RangerNav(AP_AHRS *ahrs, AP_RangeFinder_6DOF *rangefinder, AP_InertialSensor *ins, OpticalFlow *optflow, AP_Baro *baro){
+RangerNav::RangerNav(AP_AHRS *ahrs, AP_RangeScanner_6DOF *rangefinder, AP_InertialSensor *ins, OpticalFlow *optflow, AP_Baro *baro){
 	_ahrs = ahrs; 
 	_rangefinder = rangefinder; 
 	_ins = ins; 

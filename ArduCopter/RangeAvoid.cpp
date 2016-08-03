@@ -23,13 +23,14 @@
 
 #include "KalmanFilter.h"
 
-RangeAvoid::RangeAvoid(AP_AHRS *ahrs, RangerNav *nav):
+RangeAvoid::RangeAvoid(AP_AHRS *ahrs, RangerNav *nav, AP_InertialNav *inav):
 	_pitch_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
 	_roll_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
 	_pitch_center_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0),
 	_roll_center_pid(0, 0, 0, RANGE_MAX_RESPONSE * 0.5, 1.0, 1.0/400.0)
 {
 	_nav = nav;
+	_inav = inav; 
 	_pitchComp = 0; 
 	_rollComp = 0; 
 	_desired_forward = _desired_right = 0; 
@@ -93,7 +94,8 @@ void RangeAvoid::update(float dt){
 
 	_nav->update(dt); 
 
-	Vector3f p = _nav->get_position_ef(); 
+	//Vector3f p = _nav->get_position_ef(); 
+	Vector3f p = _inav->get_position() * 0.01f; 
 
 	float _yaw_mat[3][3] = {
 		{ _ahrs->cos_yaw(), _ahrs->sin_yaw(), 0.0 },
@@ -109,7 +111,7 @@ void RangeAvoid::update(float dt){
 	// transform velocity from body frame to earth frame (we only use yaw)
 	matrix::Vector<float, 3> input_ef = yaw_mat * matrix::Vector3<float>(_desired_forward, _desired_right, 0.0); 
 	matrix::Vector<float, 3> out_ef; 
-
+/*
 	if(!_nav->have_position()){
 		_target_pos_ef = pos_ef; 
 
@@ -122,10 +124,13 @@ void RangeAvoid::update(float dt){
 		out_ef(0) = _pitch_center_pid.get_p(); 
 		out_ef(1) = _roll_center_pid.get_p(); 
 	} else {
+	*/
 		static bool reset_pitch = false, reset_roll = false; 
 
 		// limit length of error to 2 meters. 
 		matrix::Vector<float, 3> err = _target_pos_ef - pos_ef; 
+
+		::printf("poserr: %f %f %f\n", err(0), err(1), err(2)); 
 		// either if error is less than setpoint or if input pointing in opposite direction from error. 
 		if(err.length() < 2.0 || (err.dot(input_ef)) < 0){
 			_target_pos_ef += input_ef * dt * 2; 
@@ -161,7 +166,7 @@ void RangeAvoid::update(float dt){
 
 		out_ef(0) = _pitch_center_pid.get_pid();
 		out_ef(1) = _roll_center_pid.get_pid(); 
-	}
+	//}
 	//_pitch_center_pid.set_input_filter_all(target_pos.x - pos.x); 
 	//_roll_center_pid.set_input_filter_all(target_pos.y - pos.y); 
 
