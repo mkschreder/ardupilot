@@ -50,6 +50,8 @@ public:
         q4 = _q4;
     }
 
+	Vector3f operator* (const Vector3f& v) const; 
+
     // check if any elements are NAN
     bool        is_nan(void) const
     {
@@ -112,6 +114,7 @@ public:
     }
 
     Quaternion inverse(void) const;
+    inline Quaternion inversed(void) const { return this->inverse(); }
 
     // allow a quaternion to be used as an array, 0 indexed
     float & operator[](uint8_t i)

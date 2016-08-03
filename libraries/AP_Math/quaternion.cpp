@@ -365,3 +365,16 @@ Quaternion Quaternion::operator/(const Quaternion &v) const
     ret.q4 = (rquat0*quat3 - rquat1*quat2 + rquat2*quat1 - rquat3*quat0);
     return ret;
 }
+
+Vector3f Quaternion::operator* (const Vector3f& v) const
+{
+	// nVidia SDK implementation
+	Vector3f uv, uuv;
+	Vector3f qvec(q2, q3, q4);
+	uv = qvec.cross(v);
+	uuv = qvec.cross(uv);
+	uv *= (2.0f * q1);
+	uuv *= 2.0f;
+
+	return v + uv + uuv;
+}
