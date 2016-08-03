@@ -233,9 +233,11 @@ void AC_AttitudeControl_Multi::rate_controller_run()
     // move throttle vs attitude mixing towards desired (called from here because this is conveniently called on every iteration)
     update_throttle_rpy_mix();
 
-    _motors.set_roll(rate_target_to_motor_roll(_rate_target_ang_vel.x));
-    _motors.set_pitch(rate_target_to_motor_pitch(_rate_target_ang_vel.y));
-    _motors.set_yaw(rate_target_to_motor_yaw(_rate_target_ang_vel.z));
+	if(_output_enabled){
+		_motors.set_roll(rate_target_to_motor_roll(_rate_target_ang_vel.x));
+		_motors.set_pitch(rate_target_to_motor_pitch(_rate_target_ang_vel.y));
+		_motors.set_yaw(rate_target_to_motor_yaw(_rate_target_ang_vel.z));
+	}
 
     control_monitor_update();
 }

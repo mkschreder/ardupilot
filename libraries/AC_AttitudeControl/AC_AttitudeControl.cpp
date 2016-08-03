@@ -107,6 +107,10 @@ void AC_AttitudeControl::set_throttle_out_unstabilized(float throttle_in, bool r
     }
     _motors.set_throttle(throttle_in);
     _angle_boost = 0.0f;
+
+	// we enable outputs here automatically
+	// the idea is that we want all existing ardupilot code to work for now
+	_output_enabled = true; 
 }
 
 // Ensure attitude controller have zero errors to relax rate controller output
