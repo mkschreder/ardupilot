@@ -11,20 +11,11 @@ License: GPLv3
 
 #include "AP_RangeScanner_6DOF_Serial.h"
 
-#define DOF_SENSOR_FRONT 1
-#define DOF_SENSOR_BACK 0
-#define DOF_SENSOR_RIGHT 3
-#define DOF_SENSOR_LEFT 2
-#define DOF_SENSOR_BOTTOM 4
-#define DOF_SENSOR_TOP 5
-
-#define DOF_SENSOR_MAX_RANGE 3
-#define DOF_SENSOR_NO_READING -1
-
 #include <AP_HAL/AP_HAL.h>
 extern const AP_HAL::HAL& hal;
 
-AP_RangeScanner_6DOF_Serial::AP_RangeScanner_6DOF_Serial(){
+AP_RangeScanner_6DOF_Serial::AP_RangeScanner_6DOF_Serial(AP_HAL::UARTDriver *uart){
+	_port = uart; 
 	_last_update = 0; 
 }
 
@@ -64,7 +55,7 @@ void AP_RangeScanner_6DOF_Serial::update(float dt){
 								else
 									_rates[c] = 0; 
 								// TODO: figure out what to return when there is no valid reading? 
-								if(readings[c] == -1) _values[c] = DOF_SENSOR_MAX_RANGE; 
+								if(readings[c] == -1) _values[c] = 0.0f; 
 								else _values[c] = (readings[c] / 58.0) * 0.01; 
 							}
 						}

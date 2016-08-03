@@ -1,10 +1,20 @@
-/* 
-Serial rangefinder with 6 finders, 2 on each axis
+/*
+	Copyright (c) 2016 Martin Schröder <mkschreder.uk@gmail.com>
 
-Copyright (c) 2016 Martin Schröder <mkschreder.uk@gmail.com>, All Rights Reserved 
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-License: GPLv3
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 
 #pragma once
 
@@ -17,11 +27,8 @@ License: GPLv3
 
 class AP_RangeScanner_6DOF_Serial : public AP_RangeScanner_6DOF {
 public: 
-    //AP_RangeScanner_6DOF_Serial(RangeScanner &ranger, uint8_t instance, RangeScanner::RangeScanner_State &_state);
-	AP_RangeScanner_6DOF_Serial(AP_HAL::UARTDriver *uart){
-		_port = uart; 
-	}
-	
+	AP_RangeScanner_6DOF_Serial(AP_HAL::UARTDriver *uart); 
+
 	void init(); 
 	void update(float dt); 
 

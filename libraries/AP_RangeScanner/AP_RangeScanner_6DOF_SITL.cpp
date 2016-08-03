@@ -1,24 +1,25 @@
-/* 
-SITL rangefinder with 6 finders, 2 on each axis
+/*
+	Copyright (c) 2016 Martin Schröder <mkschreder.uk@gmail.com>
 
-Copyright (c) 2016 Martin Schröder <mkschreder.uk@gmail.com>, All Rights Reserved 
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-License: GPLv3
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "AP_RangeScanner_6DOF.h"
 #include "AP_RangeScanner_6DOF_SITL.h"
-
-#define DOF_SENSOR_FRONT 1
-#define DOF_SENSOR_BACK 0
-#define DOF_SENSOR_RIGHT 3
-#define DOF_SENSOR_LEFT 2
-#define DOF_SENSOR_BOTTOM 4
-#define DOF_SENSOR_TOP 5
-
-#define DOF_SENSOR_MAX_RANGE 3
-#define DOF_SENSOR_NO_READING -1
 
 #include <AP_HAL/AP_HAL.h>
 extern const AP_HAL::HAL& hal;
@@ -32,12 +33,12 @@ void AP_RangeScanner_6DOF_SITL::init(){
 
 	_sitl = (SITL::SITL *)AP_Param::find_object("SIM_");
     if (_sitl == nullptr) {
-        return false;
+		hal.console->printf("Failed to find SITL object!\n"); 
     }
 }
 
 void AP_RangeScanner_6DOF_SITL::update(float dt){
-	memcpy(_values, sitl->state.scan6dof, sizeof(_values)); 	
+	memcpy(_values, _sitl->state.scan6dof, sizeof(_values)); 	
 	_notify_new_reading(); 
 }
 
