@@ -26,6 +26,7 @@ struct sitl_fdm {
     uint8_t rcin_chan_count;
     float  rcin[8];         // RC input 0..1
     Vector3f bodyMagField;  // Truth XYZ magnetic field vector in body-frame. Includes motor interference. Units are milli-Gauss.
+	float scan6dof[6]; 	// range in 6 directions from the quad in m
 };
 
 // number of rc output channels

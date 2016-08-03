@@ -347,6 +347,7 @@ void Aircraft::fill_fdm(struct sitl_fdm &fdm)
     fdm.rcin_chan_count = rcin_chan_count;
     memcpy(fdm.rcin, rcin, rcin_chan_count*sizeof(float));
     fdm.bodyMagField = mag_bf;
+	memcpy(fdm.scan6dof, scan6dof, sizeof(fdm.scan6dof)); 
 
     if (smoothing.enabled) {
         fdm.xAccel = smoothing.accel_body.x;

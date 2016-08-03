@@ -28,16 +28,16 @@
 
 namespace SITL {
 
-class TiltSim : public Aircraft {
+class QuadSim : public Aircraft {
 public:
-    TiltSim(const char *home_str, const char *frame_str);
+    QuadSim(const char *home_str, const char *frame_str);
 
     /* update model by one time step */
     virtual void update(const struct sitl_input &input);
 
     /* static object creator */
     static Aircraft *create(const char *home_str, const char *frame_str) {
-        return new TiltSim(home_str, frame_str);
+        return new QuadSim(home_str, frame_str);
     }
 
 private:
@@ -68,6 +68,7 @@ private:
 		float rcin[8]; 
 		int32_t loc[3]; 
 		float mag[3]; 
+		float range[6]; 
     };
 
     void send_state(const struct sitl_input &input);

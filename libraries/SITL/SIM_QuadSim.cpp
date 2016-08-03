@@ -14,10 +14,10 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*
-  simulator connector for ardupilot version of TiltSim
+  simulator connector for ardupilot version of QuadSim
 */
 
-#include "SIM_Tilt.h"
+#include "SIM_QuadSim.h"
 
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -30,7 +30,7 @@ extern const AP_HAL::HAL& hal;
 
 namespace SITL {
 
-TiltSim::TiltSim(const char *home_str, const char *frame_str) :
+QuadSim::QuadSim(const char *home_str, const char *frame_str) :
     Aircraft(home_str, frame_str)
     //sock(true)
 {
@@ -49,7 +49,7 @@ TiltSim::TiltSim(const char *home_str, const char *frame_str) :
 		ground_behavior = GROUND_BEHAVIOR_NONE;
 	}
     // try to bind to a specific port so that if we restart ArduPilot
-    // TiltSim keeps sending us packets. Not strictly necessary but
+    // QuadSim keeps sending us packets. Not strictly necessary but
     // useful for debugging
     //sock.bind("127.0.0.1", 9005);
 
@@ -65,7 +65,7 @@ TiltSim::TiltSim(const char *home_str, const char *frame_str) :
 	_shmout = (char*)shmat(out, NULL, 0); 
 }
 
-void TiltSim::send_state(const struct sitl_input &input){
+void QuadSim::send_state(const struct sitl_input &input){
     server_packet pkt;
 	memset(&pkt, 0, sizeof(pkt)); 
 
@@ -90,7 +90,7 @@ void TiltSim::send_state(const struct sitl_input &input){
 
 #include <errno.h>
 
-void TiltSim::drain_control_socket()
+void QuadSim::drain_control_socket()
 {
 	/*
     const uint16_t buflen = 1024;
@@ -110,14 +110,14 @@ void TiltSim::drain_control_socket()
 	*/
 }
 
-void TiltSim::recv_fdm(const struct sitl_input &input){
+void QuadSim::recv_fdm(const struct sitl_input &input){
 
 }
 
 /*
-  update the TiltSim simulation by one time step
+  update the QuadSim simulation by one time step
  */
-void TiltSim::update(const struct sitl_input &input){
+void QuadSim::update(const struct sitl_input &input){
 	long long tnow = AP_HAL::millis(); 
 	if(tnow > _packet_timeout){ 
     	send_state(input);
@@ -129,40 +129,46 @@ void TiltSim::update(const struct sitl_input &input){
 
 	static long long _calls_since = 0; 
 	_calls_since++; 
-	//int rc = sock.recv(&pkt, sizeof(pkt), 0); 
-	//if(rc == sizeof(pkt)){
+
 	memcpy(&pkt, _shmin, sizeof(client_packet)); 
 
-		if(_mode == MODE_CLIENT_SIM){
-			accel_body = Vector3f(pkt.accel[0], pkt.accel[1], pkt.accel[2]); 
-			gyro = Vector3f(pkt.gyro[0], pkt.gyro[1], pkt.gyro[2]); 
-			location.lat = pkt.loc[0]; 
-			location.lng = pkt.loc[1]; 
-			location.alt = pkt.loc[2]; 
-			mag_bf = Vector3f(pkt.mag[0], pkt.mag[1], pkt.mag[2]); 
-			//printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
-			position = Vector3f(pkt.pos[0], pkt.pos[1], pkt.pos[2]); 
-			velocity_ef = Vector3f(pkt.vel[0], pkt.vel[1], pkt.vel[2]);
-		}
+	if(_mode == MODE_CLIENT_SIM){
+		accel_body = Vector3f(pkt.accel[0], pkt.accel[1], pkt.accel[2]); 
+		gyro = Vector3f(pkt.gyro[0], pkt.gyro[1], pkt.gyro[2]); 
+		location.lat = pkt.loc[0]; 
+		location.lng = pkt.loc[1]; 
+		location.alt = pkt.loc[2]; 
+		mag_bf = Vector3f(pkt.mag[0], pkt.mag[1], pkt.mag[2]); 
+		//printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
+		position = Vector3f(pkt.pos[0], pkt.pos[1], pkt.pos[2]); 
+		velocity_ef = Vector3f(pkt.vel[0], pkt.vel[1], pkt.vel[2]);
+	}
 
-		if(pkt.id != (_last_packet_id + 1)) ::printf("DROPPED %d packets!\n", pkt.id - _last_packet_id); 
-		else ::printf("packet %d\n", pkt.id); 
-		_last_packet_id = pkt.id; 
-		::printf("calls since last packet: %d\n", _calls_since); 
-		_calls_since = 0; 
-		::printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
-		::printf("ax: %f\t%f\nay: %f\t%f\naz: %f\t%f\n", pkt.accel[0], accel_body.x, pkt.accel[1], accel_body.y, pkt.accel[2], accel_body.z); 
-		::printf("gx: %f\t%f\ngy: %f\t%f\ngz: %f\t%f\n", pkt.gyro[0], gyro.x, pkt.gyro[1], gyro.y, pkt.gyro[2], gyro.z); 
-		::printf("mx: %f\nmy: %f\nmz: %f\n", pkt.mag[0], pkt.mag[1], pkt.mag[2]); 
-		::printf("pos: %f %f %f\n", position.x, position.y, position.z); 
-		::printf("vel: %f %f %f\n", velocity_ef.x, velocity_ef.y, velocity_ef.z); 
-		::printf("loc: %d %d %d\n", location.lat, location.lng, location.alt); 
-		::printf("eu: %f %f %f\n", pkt.euler[0], pkt.euler[1], pkt.euler[2]); 
-		Vector3f a = dcm * accel_body; 	
-		::printf("accelef: %f %f %f\n", a.x, a.y, a.z); 
-
-		rcin_chan_count = 8; 
-		for(unsigned c = 0; c < 8; c++) rcin[c] = pkt.rcin[c]; 
+	//::printf("\033[H\033[2J\n"); 
+	/*
+	if(pkt.id != (_last_packet_id + 1)) ::printf("DROPPED %d packets!\n", pkt.id - _last_packet_id); 
+	else ::printf("packet %d\n", pkt.id); 
+	_last_packet_id = pkt.id; 
+	::printf("calls since last packet: %d\n", _calls_since); 
+	_calls_since = 0; 
+	::printf("acc(%f %f %f)\n", accel_body.x, accel_body.y, accel_body.z); 
+	::printf("ax: %f\t%f\nay: %f\t%f\naz: %f\t%f\n", pkt.accel[0], accel_body.x, pkt.accel[1], accel_body.y, pkt.accel[2], accel_body.z); 
+	::printf("gx: %f\t%f\ngy: %f\t%f\ngz: %f\t%f\n", pkt.gyro[0], gyro.x, pkt.gyro[1], gyro.y, pkt.gyro[2], gyro.z); 
+	::printf("mx: %f\nmy: %f\nmz: %f\n", pkt.mag[0], pkt.mag[1], pkt.mag[2]); 
+	::printf("pos: %f %f %f\n", position.x, position.y, position.z); 
+	::printf("vel: %f %f %f\n", velocity_ef.x, velocity_ef.y, velocity_ef.z); 
+	::printf("loc: %d %d %d\n", location.lat, location.lng, location.alt); 
+	::printf("eu: %f %f %f\n", pkt.euler[0], pkt.euler[1], pkt.euler[2]); 
+	::printf("6dof: %f %f %f %f %f %f\n", pkt.range[0], pkt.range[1], pkt.range[2], pkt.range[3], pkt.range[4], pkt.range[5]); 
+	Vector3f a = dcm * accel_body; 	
+	::printf("accelef: %f %f %f\n", a.x, a.y, a.z); 
+*/
+	::printf("pos_sitl: %f %f %f\n", position.x, position.y, position.z); 
+	::printf("6dof: %f %f %f %f %f %f\n", pkt.range[0], pkt.range[1], pkt.range[2], pkt.range[3], pkt.range[4], pkt.range[5]); 
+	rcin_chan_count = 8; 
+	for(unsigned c = 0; c < 8; c++) rcin[c] = pkt.rcin[c]; 
+	
+	memcpy(scan6dof, pkt.range, sizeof(scan6dof)); 
 
 	adjust_frame_time(1000);
 

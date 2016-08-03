@@ -130,8 +130,10 @@ protected:
     float rpm2 = 0;
     uint8_t rcin_chan_count = 0;
     float rcin[8];
-
+	
     Vector3f mag_bf; // local earth magnetic field vector in Gauss, earth frame
+	
+	float scan6dof[6];  // range in m to closest object in all 6 directions
 
     uint64_t time_now_us;
 
