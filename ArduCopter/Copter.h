@@ -94,8 +94,9 @@
 #include <AC_Control/AC_AngleControl.h>
 #include <AC_Control/AC_VelocityControl.h>
 #include <AC_Control/AC_PositionControl.h>
+#include <AC_RangerControl/AC_RangerControl.h>
 
-#include "RangeAvoid.h"
+#include <AC_RangerControl/RangeAvoid.h>
 
 // Configuration
 #include "defines.h"
@@ -588,6 +589,7 @@ private:
 	AC_RateControl _rate_control; 
 	AC_AngleControl _angle_control; 
 	AC_VelocityControl _velocity_control; 
+	AC_RangerControl _ranger_control; 
 
 	#if FRAME_CONFIG == HELI_FRAME
     // Mode filter to reject RC Input glitches.  Filter size is 5, and it draws the 4th element, so it can reject 3 low glitches,

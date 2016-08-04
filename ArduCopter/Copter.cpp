@@ -124,7 +124,8 @@ Copter::Copter(void) :
 	range_avoid(&ahrs, &ranger_nav, &inertial_nav),
 	_rate_control(ahrs, aparm, motors),
 	_angle_control(ahrs, aparm, _rate_control),
-	_velocity_control(ahrs, inertial_nav, aparm, _angle_control)
+	_velocity_control(ahrs, inertial_nav, aparm, _angle_control),
+	_ranger_control(ahrs, aparm, _velocity_control, _angle_control, _rate_control, rangefinders)
 {
     memset(&current_loc, 0, sizeof(current_loc));
 

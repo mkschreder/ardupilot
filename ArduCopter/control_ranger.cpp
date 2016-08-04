@@ -42,14 +42,7 @@ void Copter::control_ranger_run()
 	attitude_control.enable(false); 
 
     motors.set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
-	
-    get_pilot_desired_angle_rates(channel_roll->get_control_in(), channel_pitch->get_control_in(), channel_yaw->get_control_in(), target_roll, target_pitch, target_yaw);
 
-	target_roll = channel_roll->get_control_in() / 4500.0f; 
-	target_pitch = channel_pitch->get_control_in() / 4500.0f; 
-	target_yaw = channel_yaw->get_control_in() / 4500.0f; 
-	throttle = channel_throttle->get_control_in() / 1000.0f; 
-	
 	float rc_4 = constrain_float((hal.rcin->read(4) - 1000.0), 0, 1000) * 0.001; 
 	float rc_5 = constrain_float((hal.rcin->read(5) - 1000.0), 0, 1000) * 0.001; 
 
@@ -93,21 +86,22 @@ void Copter::control_ranger_run()
 	// throttle: ku 0.8, tu: 2.0
 	_velocity_control.set_tuning(
 		//Vector3f(0.213, 0.057, 0.196), 
-		Vector3f(kp, ki, kd), 
-		Vector3f(kp, ki, kd),
+		Vector3f(0.079, 0.018, 0.083), 
+		Vector3f(0.079, 0.018, 0.083),
 		Vector3f(0.48, 0.48, 0.12)
 	); 
+	
+	target_roll = channel_roll->get_control_in() / 4500.0f; 
+	target_pitch = channel_pitch->get_control_in() / 4500.0f; 
+	target_yaw = channel_yaw->get_control_in() / 4500.0f; 
+	throttle = channel_throttle->get_control_in() / 1000.0f; 
 
-	// convert throttle into velocity
-	throttle -= 0.5; 
-	if(throttle > -0.1f && throttle < 0.1f) throttle = 0; 
+	_ranger_control.input_pilot_roll(target_roll); 
+	_ranger_control.input_pilot_pitch(target_pitch); 
+	_ranger_control.input_pilot_yaw_rate(target_yaw); 
+	_ranger_control.input_pilot_throttle(throttle); 
 
-	_velocity_control.input_x_velocity(target_pitch * 10.0); 
-	_velocity_control.input_y_velocity(target_roll * 10.0); 
-	_velocity_control.input_z_velocity(throttle * 4.0); 
-
-	_velocity_control.input_yaw_rate(target_yaw); 
-
+	_ranger_control.update(G_Dt); 
 	_velocity_control.update(G_Dt); 
 	_angle_control.update(G_Dt); 
 	_rate_control.update(G_Dt); 
