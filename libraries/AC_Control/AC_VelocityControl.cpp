@@ -57,7 +57,7 @@ void AC_VelocityControl::input_throttle(float thr){
 }
 
 void AC_VelocityControl::update(float dt){
-	Vector3f vel;// = _inav.get_velocity() * 0.01f; 
+	Vector3f vel; 
 
 	// use gps velocity if availabel and if not then we use inertial (accellerometer) velocity 
 	if(!_ahrs.get_velocity_NED(vel))
@@ -87,9 +87,11 @@ void AC_VelocityControl::update(float dt){
 	::printf("v(%f %f %f) verr: %f %f %f, out(%f %f %f)\n", vel.x, vel.y, vel.z, err.x, err.y, err.z, out_roll, out_pitch, out_throttle); 
 
 	// output to rate controller
-	_angle_control.input_roll_angle(out_roll); 
-	_angle_control.input_pitch_angle(-out_pitch); 
-
-	_angle_control.input_throttle(out_throttle); 
+	if(_flags & AC_CONTROL_Y)
+		_angle_control.input_roll_angle(out_roll); 
+	if(_flags & AC_CONTROL_X)
+		_angle_control.input_pitch_angle(-out_pitch); 
+	if(_flags & AC_CONTROL_Z)
+		_angle_control.input_throttle(out_throttle); 
 }
 

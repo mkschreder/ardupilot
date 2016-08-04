@@ -31,8 +31,8 @@ public:
 	virtual void init() = 0; 
 	virtual void update(float dt) = 0; 
 
-	void get_rates_mps(float *front, float *back, float *right, float *left, float *bottom, float *top); 
-	void get_readings_m(float *front, float *back, float *right, float *left, float *bottom, float *top); 
+	void get_rates_mps(float *front, float *back, float *right, float *left, float *bottom, float *top) const ; 
+	void get_readings_m(float *front, float *back, float *right, float *left, float *bottom, float *top) const ; 
 
 	bool have_front() const;  
 	bool have_back() const;
@@ -41,7 +41,7 @@ public:
 	bool have_bottom() const; 
 	bool have_top() const; 
 
-	long long last_update_millis(){ return _last_reading_time; }
+	long long last_update_millis() const { return _last_reading_time; }
 protected: 
 	void _notify_new_reading(); 
 	float _values[6]; 

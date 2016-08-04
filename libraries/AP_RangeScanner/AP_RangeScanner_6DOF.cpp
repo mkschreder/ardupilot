@@ -18,7 +18,7 @@
 #include <AP_Math/AP_Math.h>
 #include "AP_RangeScanner_6DOF.h"
 
-void AP_RangeScanner_6DOF::get_rates_mps(float *front, float *back, float *right, float *left, float *bottom, float *top){
+void AP_RangeScanner_6DOF::get_rates_mps(float *front, float *back, float *right, float *left, float *bottom, float *top) const{
 	*front = _rates[DOF_SENSOR_FRONT]; 
 	*back = _rates[DOF_SENSOR_BACK]; 
 	*left = _rates[DOF_SENSOR_LEFT]; 
@@ -27,7 +27,7 @@ void AP_RangeScanner_6DOF::get_rates_mps(float *front, float *back, float *right
 	*top = _rates[DOF_SENSOR_TOP]; 
 }
 
-void AP_RangeScanner_6DOF::get_readings_m(float *front, float *back, float *right, float *left, float *bottom, float *top){
+void AP_RangeScanner_6DOF::get_readings_m(float *front, float *back, float *right, float *left, float *bottom, float *top) const{
 	*front = _values[DOF_SENSOR_FRONT]; 
 	*back = _values[DOF_SENSOR_BACK]; 
 	*left = _values[DOF_SENSOR_LEFT]; 
