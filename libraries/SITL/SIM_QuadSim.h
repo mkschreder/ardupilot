@@ -82,6 +82,7 @@ private:
     void send_state(const struct sitl_input &input);
     void recv_fdm(const struct sitl_input &input);
 	void drain_control_socket(); 
+	bool start_sim(void); 
 	
 	long long _packet_timeout; 
     //SocketAPM sock;
@@ -90,6 +91,7 @@ private:
 	frame_type_t _frame_type; 
 	uint32_t _last_packet_id; 
 
+    int quadsim_stdout;
 	char *_shmout, *_shmin; 
 };
 

@@ -19,3 +19,6 @@
 [submodule "gtest"]
 	path = modules/gtest
 	url = git://github.com/ArduPilot/googletest
+[submodule "quadsim"]
+	path = quadsim
+	url = git@bitbucket.org:mkschreder/quadsim-private.git

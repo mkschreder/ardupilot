@@ -57,13 +57,83 @@ QuadSim::QuadSim(const char *home_str, const char *frame_str) :
     //sock.reuseaddress();
     //sock.set_blocking(false);
 
+	quadsim_stdout = -1; 
+}
+
+static bool _expect(int fd, const char *str){
+    const char *basestr = str;
+    while (*str) {
+        char c;
+        if (read(fd, &c, 1) != 1) {
+            return false;
+        }
+        if (c == *str) {
+            str++;
+        } else {
+            str = basestr;
+        }
+    }
+    return true;
+}
+
+bool QuadSim::start_sim(void){ 
+	int p[2];
+	if(quadsim_stdout > 0) return true; 
+
+	int devnull = open("/dev/null", O_RDWR);
+	if (pipe(p) != 0) {
+		AP_HAL::panic("Unable to create pipe");
+	}
+	pid_t child_pid = fork();
+	if (child_pid == 0) {
+		// in child
+		setsid();
+		dup2(p[1], 0);
+		dup2(p[1], 1);
+		close(p[0]);
+		for (uint8_t i=3; i<100; i++) {
+			close(i);
+		}
+		
+		if (chdir("../quadsim") != 0) {
+			perror("quadsim");
+			exit(1);
+		}
+
+		int ret = execlp("./start-quadsim.sh", NULL);
+		if (ret != 0) {
+			perror("quadsim");
+		}
+		exit(1);
+	}
+	close(p[1]);
+	quadsim_stdout = p[0];
+
+	// read startup to be sure it is running
+	char c;
+	if (read(quadsim_stdout, &c, 1) != 1) {
+		AP_HAL::panic("Unable to start quadsim");
+	}
+
+    if (!_expect(quadsim_stdout, "Irrlicht Engine version")) {
+        AP_HAL::panic("Failed to start QuadSim");
+    }
+
+	fcntl(quadsim_stdout, F_SETFL, fcntl(quadsim_stdout, F_GETFL, 0) | O_NONBLOCK);
+
+	close(devnull);
+
+	// setup shared memory!
+
 	int out = shmget(9003, sizeof(struct server_packet), 0666); 
 	if(out < 0) perror("shmget"); 
 	int in = shmget(9005, sizeof(struct client_packet), 0666); 
 	if(in < 0) perror("shmget"); 
-	
+
 	_shmin = (char*)shmat(in, NULL, 0); 
 	_shmout = (char*)shmat(out, NULL, 0); 
+
+	return true;
 }
 
 void QuadSim::send_state(const struct sitl_input &input){
@@ -121,10 +191,13 @@ void QuadSim::recv_fdm(const struct sitl_input &input){
  */
 void QuadSim::update(const struct sitl_input &input){
 	long long tnow = AP_HAL::millis(); 
+
 	if(tnow > _packet_timeout){ 
     	send_state(input);
 		_packet_timeout = tnow + 10; 
 	}
+
+	if(!start_sim()) return; 
 
 	client_packet pkt;
 	memset(&pkt, sizeof(pkt), 0); 

@@ -54,13 +54,11 @@ void Copter::control_ranger_run()
 
 	::printf("ku/tu: %f %f, pid: %f %f %f\n", ku, tu, kp, ki, kd); 
 
-#if 0
 	_pid.set_position_tuning(
-		matrix::Vector3f(0.453, 0.453, 0.080), 
-		matrix::Vector3f(0.090, 0.155, 0.331), 
-		matrix::Vector3f(0.103, 0.331, 0.010) 
+		matrix::Vector3f(0.400, 0.400, 1.000), 
+		matrix::Vector3f(0.000, 0.000, 0.000), 
+		matrix::Vector3f(0.300, 0.300, 0.200) 
 	); 
-#endif
 	_pid.set_velocity_tuning(
 		matrix::Vector3f(0.079, 0.079, 0.480), 
 		matrix::Vector3f(0.018, 0.018, 0.480), 
@@ -84,24 +82,35 @@ void Copter::control_ranger_run()
 
 	Vector3f vel; 
 	// use gps velocity if available and if not then we use inertial (accellerometer) velocity 
-	if(!ahrs.get_velocity_NED(vel))
+	if(!ahrs.get_velocity_NED(vel)){
+		::printf("No velocity!\n"); 
 		vel = inertial_nav.get_velocity() * 0.01; 
+	}
+
+	Vector3f pos, _target_pos; 
+	if(!ahrs.get_relative_position_NED(pos)){
+		::printf("No position!\n"); 
+		pos = Vector3f(0, 0, 0); 
+	} else if(is_zero(pos.length())){
+		_target_pos = pos; 
+	}
 
 	// we will rotate velocity into body frame
-	Quaternion yaw_inv = Quaternion(cos(ahrs.yaw / 2), 0, 0, sin(ahrs.yaw / 2)).inversed(); 
-	vel = yaw_inv * vel; 
-	
+	Quaternion qyaw = Quaternion(cos(ahrs.yaw / 2), 0, 0, sin(ahrs.yaw / 2)); 
+	Quaternion qyaw_inv = qyaw.inversed(); 
+	vel = qyaw_inv * vel; 
+
 	Vector3f gyro = ins.get_gyro(); 
 
-	// convert throttle into up/down rate with max speed of 4m/s
+	// convert throttle into up/down rate with max speed of 1m/s
 	float thr = throttle - 0.5; 
 	if(thr > -0.1f && thr < 0.1f) thr = 0; 
-	float descend_velocity = constrain_float(thr * 2.0f, -1.0, 1.0) * 4.0f; 
+	float descend_velocity = constrain_float(thr * 2.0f, -1.0, 1.0); 
 
 	Vector3f sp; 
 	_obstacle_sensor.update(G_Dt); 
 	_obstacle_sensor.get_safest_position_offset(sp); 
-	
+
 	::printf("safest pos: %f %f %f\n", sp.x, sp.y, sp.z); 
 
 	// input measured parameters
@@ -110,11 +119,32 @@ void Copter::control_ranger_run()
 	_pid.input_measured_angles(matrix::Vector3f(ahrs.roll, ahrs.pitch, ahrs.yaw)); 
 	_pid.input_measured_angular_velocity(matrix::Vector3f(gyro.x, gyro.y, gyro.z)); 
 
-	_pid.input_target_position(matrix::Vector3f(pos.x, pos.y, pos.z)); 
+	sp = (qyaw * Vector3f(sp.x, sp.y, 0)) * 0.8; 
+	Vector3f tp = (qyaw * Vector3f(-target_pitch, target_roll, 0) + Vector3f(0, 0, -descend_velocity)) * 10.0f; 
+
+	if(!is_zero(target_pitch) || !is_zero(target_roll)) {
+		_target_pos = pos + Vector3f(tp.x, tp.y, 0); 
+	}
+	/*
+	if(!is_zero(sp.x) || !is_zero(sp.y)){
+		_target_pos = pos + Vector3f(sp.x, sp.y, 0); 
+	}	*/
+
+	_pid.input_target_position(
+		matrix::Vector3f(_target_pos.x, _target_pos.y, _target_pos.z) 
+	); 
+
+	matrix::Vector3f v = _pid.get_desired_velocity(); 
+	Vector3f dvel = qyaw_inv * Vector3f(v(0), v(1), 0); 
+
+	_pid.input_target_velocity(matrix::Vector3f(dvel.x, dvel.y, -descend_velocity)); 
+
+/*
 	_pid.input_target_velocity(matrix::Vector3f(
-		-(target_pitch * 20.0f + sp.x), 
+		-(target_pitch * 20.0f - sp.x), 
 		(target_roll * 20.0f + sp.y), 
 		-descend_velocity)); 
+*/
 
 	matrix::Vector3f ta = _pid.get_desired_acceleration(); 
 	_pid.input_target_angles(matrix::Vector3f(
@@ -132,7 +162,8 @@ void Copter::control_ranger_run()
 	motors.set_yaw(rates(2)); 
 
 	// convert throttle to 0-1.0 range 
-	motors.set_throttle(-constrain_float(ta(2), -1.0f, 1.0f) * 0.5f + 0.5f); 
+	//motors.set_throttle(-constrain_float(ta(2), -1.0f, 1.0f) * 0.5f + 0.5f); 
+	motors.set_throttle(throttle); 
 
 #if 0
     // apply SIMPLE mode transform to pilot inputs
