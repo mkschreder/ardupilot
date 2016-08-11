@@ -36,6 +36,7 @@ QuadSim::QuadSim(const char *home_str, const char *frame_str) :
 {
 	_frame = NULL; 
 	_mode = MODE_CLIENT_SIM; 
+	_frame_type = FRAME_QUAD_X; 
 	_packet_timeout = 0; 
 	if(frame_str){
 		printf("Looking up frame %s\n", frame_str); 
@@ -56,9 +57,9 @@ QuadSim::QuadSim(const char *home_str, const char *frame_str) :
     //sock.reuseaddress();
     //sock.set_blocking(false);
 
-	int out = shmget(9003, sizeof(struct server_packet), IPC_CREAT | 0666); 
+	int out = shmget(9003, sizeof(struct server_packet), 0666); 
 	if(out < 0) perror("shmget"); 
-	int in = shmget(9005, sizeof(struct client_packet), IPC_CREAT | 0666); 
+	int in = shmget(9005, sizeof(struct client_packet), 0666); 
 	if(in < 0) perror("shmget"); 
 	
 	_shmin = (char*)shmat(in, NULL, 0); 
@@ -78,6 +79,7 @@ void QuadSim::send_state(const struct sitl_input &input){
 
 	Vector3f velocity = dcm.transposed() * velocity_ef; 
 	pkt.mode = _mode; 
+	pkt.frame = (uint8_t)_frame_type; 
 	pkt.euler[0] = r; pkt.euler[1] = p; pkt.euler[2] = y; 
 	pkt.pos[0] = position.x; pkt.pos[1] = position.y; pkt.pos[2] = position.z; 
 	pkt.vel[0] = velocity.x; pkt.vel[1] = velocity.y; pkt.vel[2] = velocity.z; 

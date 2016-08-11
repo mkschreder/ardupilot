@@ -30,21 +30,17 @@
 
 class AC_AngleControl : public AC_Controller {
 public: 
-	AC_AngleControl( const AP_AHRS &ahrs,
-					const AP_Vehicle::MultiCopter &aparm,
-					AC_RateControl& rate_control); 
-
+	AC_AngleControl( ); 
 	void input_roll_angle(float angle); 
 	void input_pitch_angle(float angle); 
-	void input_yaw_angle(float angle); 
-	void input_yaw_rate(float rate); 
-	void input_throttle(float thr); 
+	void input_measured_angles(float roll, float pitch); 
+
+	float get_desired_roll_rate(void); 
+	float get_desired_pitch_rate(void); 
 
 	void update(float dt); 
 private: 
-	AC_RateControl &_rate_control; 
-	const AP_AHRS &_ahrs; 
-	Vector3f _target_angle; 
-	float _yaw_rate; 
-	float _throttle; 
+	float _sensor_roll, _sensor_pitch; 
+	float _out_roll, _out_pitch; 
+	float _target_roll, _target_pitch; 
 }; 

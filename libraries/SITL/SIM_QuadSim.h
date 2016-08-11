@@ -30,6 +30,13 @@ namespace SITL {
 
 class QuadSim : public Aircraft {
 public:
+	typedef enum {
+		FRAME_UNKNOWN = 0,
+		FRAME_QUAD_PLUS,
+		FRAME_QUAD_X, 
+		FRAME_RANGER_TILT_X
+	} frame_type_t; 
+
     QuadSim(const char *home_str, const char *frame_str);
 
     /* update model by one time step */
@@ -48,6 +55,7 @@ private:
 	// tilt sim servo packets
     struct server_packet {
 		uint8_t mode; 
+		uint8_t frame; 
 		int16_t servo[8]; 
 		float pos[3]; 
 		float vel[3]; 
@@ -79,6 +87,7 @@ private:
     //SocketAPM sock;
 	uint8_t _mode; 
     Frame *_frame;
+	frame_type_t _frame_type; 
 	uint32_t _last_packet_id; 
 
 	char *_shmout, *_shmin; 

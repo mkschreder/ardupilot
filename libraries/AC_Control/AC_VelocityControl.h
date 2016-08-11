@@ -33,21 +33,23 @@
 
 class AC_VelocityControl : public AC_Controller {
 public: 
-	AC_VelocityControl( const AP_AHRS &ahrs, const AP_InertialNav &inav,
-					const AP_Vehicle::MultiCopter &aparm,
-					AC_AngleControl& angle); 
+	AC_VelocityControl( ); 
+
 	void input_x_velocity(float rate); 
 	void input_y_velocity(float rate); 
 	void input_z_velocity(float rate); 
-	void input_heading(float angle); 
-	void input_yaw_rate(float rate); 
-	void input_throttle(float thr); 
+	void input_measured_velocity_bf(const Vector3f &vel); 
+
+	float get_desired_pitch_angle(void); 
+	float get_desired_roll_angle(void); 
+	float get_desired_throttle(void); 
 
 	void update(float dt); 
 private: 
-	const AP_InertialNav &_inav; 
-	const AP_AHRS &_ahrs; 
-	AC_AngleControl &_angle_control; 
-	Vector3f _target_vel; 
+	float _out_roll; 
+	float _out_pitch; 
+	float _out_throttle; 
+
+	Vector3f _sensor_vel, _target_vel; 
 	float _throttle; 
 }; 

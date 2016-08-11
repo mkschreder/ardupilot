@@ -30,18 +30,19 @@
 
 class AC_RateControl : public AC_Controller {
 public: 
-	AC_RateControl( const AP_AHRS &ahrs,
-					const AP_Vehicle::MultiCopter &aparm,
-					AP_Motors& motors); 
+	AC_RateControl( ); 
 	void input_roll_rate(float rate); 
 	void input_pitch_rate(float rate); 
 	void input_yaw_rate(float rate); 
 	void input_throttle(float thr); 
+	void input_measured_rates(const Vector3f &rates); 
+
+	float get_motor_roll(void); 
+	float get_motor_pitch(void); 
+	float get_motor_yaw(void); 
 
 	void update(float dt); 
 private: 
-	const AP_AHRS &_ahrs; 
-	AP_Motors &_motors; 
-	Vector3f _target_rate; 
-	float _throttle; 
+	Vector3f _target_rate, _gyro_rate; 
+	float _out_roll, _out_pitch, _out_yaw; 
 }; 

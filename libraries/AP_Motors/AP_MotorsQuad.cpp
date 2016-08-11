@@ -106,6 +106,12 @@ void AP_MotorsQuad::setup_motors()
     normalise_rpy_factors();
 }
 
+void AP_MotorsQuad::set_motor_pitch(float deg){
+	_tilt_pitch = constrain_float(deg, -45, 45); 
+}
+
 void AP_MotorsQuad::output(){
 	AP_MotorsMatrix::output(); 
+
+	rc_write(AP_MOTORS_MAX_NUM_MOTORS - 1, 1500.0f + (_tilt_pitch / 45.0f) * 500.0f); 
 }

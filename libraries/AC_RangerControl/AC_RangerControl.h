@@ -37,12 +37,7 @@
 
 class AC_RangerControl : public AC_Controller {
 public: 
-	AC_RangerControl( const AP_AHRS &ahrs,
-					const AP_Vehicle::MultiCopter &aparm,
-					AC_VelocityControl &vel_control,
-					AC_AngleControl &angle_control, 
-					AC_RateControl &rate_control, 
-					AP_RangeScanner_6DOF &rangefinders); 
+	AC_RangerControl( ); 
 	void input_pilot_roll(float angle); 
 	void input_pilot_pitch(float angle); 
 	void input_pilot_yaw_rate(float angle); 
@@ -52,13 +47,8 @@ public:
 private: 
 	void enter_state(int state); 
 	void leave_state(int state); 
-	const AP_AHRS &_ahrs; 
-	AC_VelocityControl &_velocity_control; 
-	AC_AngleControl &_angle_control; 
-	AC_RateControl &_rate_control; 
 	Vector3f _pilot_input; 
 	Vector3f _takeoff_position; 
-	ObstacleSensor _obstacle_sensor; 
 	float _pilot_throttle, _throttle_rate; 
 	int _state; 
 }; 

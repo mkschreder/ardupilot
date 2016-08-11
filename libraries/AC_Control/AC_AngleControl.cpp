@@ -18,57 +18,37 @@
 #include "AC_AngleControl.h"
 #include <stdio.h>
 
-AC_AngleControl::AC_AngleControl( const AP_AHRS &ahrs,
-					const AP_Vehicle::MultiCopter &aparm,
-					AC_RateControl& rate_control) :
-	_ahrs(ahrs), 
-	_rate_control(rate_control),
-	_yaw_rate(0)
-{
+AC_AngleControl::AC_AngleControl( ){
 
 }
 
 void AC_AngleControl::input_roll_angle(float angle){
-	_target_angle.x = angle; 
+	_target_roll = angle; 
 }
 
 void AC_AngleControl::input_pitch_angle(float angle){
-	_target_angle.y = angle; 
+	_target_pitch = angle; 
 }
 
-void AC_AngleControl::input_yaw_angle(float angle){
-	_target_angle.z = angle; 
+void AC_AngleControl::input_measured_angles(float roll, float pitch){
+	_sensor_roll = roll; 
+	_sensor_pitch = pitch; 
 }
 
-void AC_AngleControl::input_yaw_rate(float rate){
-	_yaw_rate = rate; 
+float AC_AngleControl::get_desired_roll_rate(void){
+	return _out_roll; 
 }
 
-void AC_AngleControl::input_throttle(float thr){
-	_throttle = thr; 
+float AC_AngleControl::get_desired_pitch_rate(void){
+	return _out_pitch; 
 }
+
 
 void AC_AngleControl::update(float dt){
-	// update yaw based on yaw rate
-	_target_angle.z += _yaw_rate * dt; 
-	
-	// limit yaw to valid range of angles -180 to +180 deg (-pi to pi rads)
-	//_target_angle.z = fmod(_target_angle.z, M_PI); 
+	_pid_x.set_input_filter_all(_target_roll - _sensor_roll);	
+	_pid_y.set_input_filter_all(_target_pitch - _sensor_pitch); 	
 
-	Vector3f err = _target_angle - Vector3f(_ahrs.roll, _ahrs.pitch, _ahrs.yaw); 
-
-	_pid_x.set_input_filter_all(err.x);	
-	_pid_y.set_input_filter_all(err.y); 	
-	_pid_z.set_input_filter_all(err.z); 	
-
-	float out_roll = _pid_x.get_pid(); 
-	float out_pitch = _pid_y.get_pid(); 
-
-	// output to rate controller
-	_rate_control.input_roll_rate(out_roll * 2); 
-	_rate_control.input_pitch_rate(out_pitch * 2); 
-	_rate_control.input_yaw_rate(_yaw_rate); //_pid_z.get_pid()); 
-
-	_rate_control.input_throttle(_throttle); 
+	_out_roll = _pid_x.get_pid(); 
+	_out_pitch = _pid_y.get_pid(); 
 }
 
