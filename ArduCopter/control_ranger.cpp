@@ -55,24 +55,25 @@ void Copter::control_ranger_run()
 	::printf("ku/tu: %f %f, pid: %f %f %f\n", ku, tu, kp, ki, kd); 
 
 	_pid.set_position_tuning(
-		matrix::Vector3f(0.400, 0.400, 1.000), 
+		matrix::Vector3f(0.100, 0.100, 1.000), 
 		matrix::Vector3f(0.000, 0.000, 0.000), 
-		matrix::Vector3f(0.300, 0.300, 0.200) 
+		matrix::Vector3f(0.100, 0.100, 0.200) 
 	); 
 	_pid.set_velocity_tuning(
 		matrix::Vector3f(0.079, 0.079, 0.480), 
-		matrix::Vector3f(0.018, 0.018, 0.480), 
+		matrix::Vector3f(0.018, 0.018, 0.018), 
 		matrix::Vector3f(0.083, 0.083, 0.120) 
 	); 
 	_pid.set_angle_tuning(
 		matrix::Vector3f(2.000, 2.000, 1.000), 
-		matrix::Vector3f(0.000, 0.000, 0.000), 
+		matrix::Vector3f(0.100, 0.100, 0.000), 
 		matrix::Vector3f(0.331, 0.331, 0.010) 
 	); 
 	_pid.set_angular_velocity_tuning(
 		matrix::Vector3f(0.600, 0.600, 1.000), 
 		matrix::Vector3f(0.865, 0.865, 0.000), 
-		matrix::Vector3f(0.103, 0.103, 0.010)
+		//matrix::Vector3f(0.103, 0.103, 0.010)
+		matrix::Vector3f(0.400, 0.103, 0.010)
 	); 
 	
 	float target_roll = channel_roll->get_control_in() / 4500.0f; 
@@ -87,7 +88,8 @@ void Copter::control_ranger_run()
 		vel = inertial_nav.get_velocity() * 0.01; 
 	}
 
-	Vector3f pos, _target_pos; 
+	Vector3f pos; 
+	static Vector3f _target_pos; 
 	if(!ahrs.get_relative_position_NED(pos)){
 		::printf("No position!\n"); 
 		pos = Vector3f(0, 0, 0); 
@@ -119,16 +121,17 @@ void Copter::control_ranger_run()
 	_pid.input_measured_angles(matrix::Vector3f(ahrs.roll, ahrs.pitch, ahrs.yaw)); 
 	_pid.input_measured_angular_velocity(matrix::Vector3f(gyro.x, gyro.y, gyro.z)); 
 
-	sp = (qyaw * Vector3f(sp.x, sp.y, 0)) * 0.8; 
-	Vector3f tp = (qyaw * Vector3f(-target_pitch, target_roll, 0) + Vector3f(0, 0, -descend_velocity)) * 10.0f; 
+	Vector3f tp = (qyaw * Vector3f(-target_pitch, target_roll, 0) * 10.0f + Vector3f(0, 0, -descend_velocity) * 4.0f); 
 
-	if(!is_zero(target_pitch) || !is_zero(target_roll)) {
-		_target_pos = pos + Vector3f(tp.x, tp.y, 0); 
+	if(!is_zero(sp.x) || !is_zero(sp.y) || !is_zero(target_pitch) || !is_zero(target_roll)){
+		_target_pos = pos; 
+		if(!is_zero(sp.x) || !is_zero(sp.y))
+			_target_pos += (qyaw * Vector3f(sp.x, sp.y, 0)) * 2.0f; 
+		if(!is_zero(target_pitch) || !is_zero(target_roll))
+			_target_pos += Vector3f(tp.x, tp.y, 0); 
 	}
-	/*
-	if(!is_zero(sp.x) || !is_zero(sp.y)){
-		_target_pos = pos + Vector3f(sp.x, sp.y, 0); 
-	}	*/
+
+	::printf("target pos: %f %f %f\n", _target_pos.x, _target_pos.y, _target_pos.z); 
 
 	_pid.input_target_position(
 		matrix::Vector3f(_target_pos.x, _target_pos.y, _target_pos.z) 
@@ -138,14 +141,12 @@ void Copter::control_ranger_run()
 	Vector3f dvel = qyaw_inv * Vector3f(v(0), v(1), 0); 
 
 	_pid.input_target_velocity(matrix::Vector3f(dvel.x, dvel.y, -descend_velocity)); 
-
 /*
 	_pid.input_target_velocity(matrix::Vector3f(
 		-(target_pitch * 20.0f - sp.x), 
 		(target_roll * 20.0f + sp.y), 
 		-descend_velocity)); 
 */
-
 	matrix::Vector3f ta = _pid.get_desired_acceleration(); 
 	_pid.input_target_angles(matrix::Vector3f(
 		constrain_float(ta(1), radians(-45.0f), radians(45.0f)), 
@@ -153,7 +154,7 @@ void Copter::control_ranger_run()
 		ahrs.yaw)); 
 	//_pid.input_target_angles(matrix::Vector3f(target_roll * radians(45.0f), target_pitch * radians(45.0f), ahrs.yaw)); 
 	matrix::Vector3f ar = _pid.get_desired_angular_velocity(); 
-	_pid.input_target_angular_velocity(matrix::Vector3f(ar(0), ar(1), target_yaw)); 
+	_pid.input_target_angular_velocity(matrix::Vector3f(ar(0), ar(1), target_yaw * 5.0f)); 
 	_pid.update(G_Dt); 
 
 	matrix::Vector3f rates = _pid.get_desired_angular_acceleration(); 
@@ -162,8 +163,9 @@ void Copter::control_ranger_run()
 	motors.set_yaw(rates(2)); 
 
 	// convert throttle to 0-1.0 range 
-	//motors.set_throttle(-constrain_float(ta(2), -1.0f, 1.0f) * 0.5f + 0.5f); 
-	motors.set_throttle(throttle); 
+	::printf("throttle: %f\n", -constrain_float(ta(2), -1.0f, 1.0f) * 0.5f + 0.5f); 
+	motors.set_throttle(-constrain_float(ta(2), -1.0f, 1.0f) * 0.5f + 0.5f); 
+	//motors.set_throttle(throttle); 
 
 #if 0
     // apply SIMPLE mode transform to pilot inputs
