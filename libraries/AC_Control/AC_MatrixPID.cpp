@@ -50,6 +50,10 @@ AC_MatrixPID::AC_MatrixPID(){
 	I.setZero(); O.setZero(); 
 	B.setZero(); 
 	Kp.setZero(); Ki.setZero(); Kd.setZero(); 
+
+	// output limits
+	Lx.setAll(1.0f); 
+	Ln = -Lx; 
 }
 
 // input of various sensor data
@@ -160,6 +164,12 @@ void AC_MatrixPID::update(float dt){
 
 	// calculate output
 	O = Kp.emult(E) + Ki.emult(I) + Kd.emult(D); 
+
+	// anti windup using back calculation using the output limits. 
+	matrix::Matrix<float, 3, 6> Ol = O.limited(Ln, Lx); 
+	//matrix::Matrix<float, 3, 6> s = (O - Ol); s.print(); 
+	I -= (O - Ol);	
+	//O = Ol; 
 
 	// update stored targets and measurements
 	T = Tnew; 

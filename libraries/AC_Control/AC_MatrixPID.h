@@ -57,5 +57,6 @@ private:
 	matrix::Matrix<float, 6, 1> B; // boolean matrix specifying inputs that were added since last update  
 	matrix::Matrix<float, 3, 6> I; // integrals  
 	matrix::Matrix<float, 3, 6> O; // output  
+	matrix::Matrix<float, 3, 6> Lx, Ln; // min/max output limits
 	matrix::Matrix<float, 3, 6> Kp, Ki, Kd; // pid gains 
 }; 
