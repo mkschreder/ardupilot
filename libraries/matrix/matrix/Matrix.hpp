@@ -42,6 +42,7 @@ public:
     Matrix() :
         _data()
     {
+		memset(_data, 0, sizeof(_data)); 
     }
 
     Matrix(const Type *data_) :
@@ -93,6 +94,12 @@ public:
         }
         return (*this);
     }
+
+	static const Matrix<Type, M, N> &Identity(){
+		static Matrix<Type, M, N> res; 
+		res.setIdentity(); 
+		return res; 
+	}
 
     /**
      * Matrix Operations
@@ -289,10 +296,10 @@ public:
     void write_string(char * buf, size_t n) const
     {
         const Matrix<Type, M, N> &self = *this;
-        char data_buf[500] = {0};
+        char data_buf[M*N*10] = {0};
         for (size_t i = 0; i < M; i++) {
-            char data_line[100] = {0};
-            char data_line_formatted[100] = {0};
+            char data_line[M*N*10] = {0};
+            char data_line_formatted[M * N * 10] = {0};
             for (size_t j = 0; j < N; j++) {
                 char val_buf[15];
                 if (j == N-1) {
@@ -314,9 +321,14 @@ public:
 
     void print() const
     {
-        char buf[200];
-        write_string(buf, 200);
-        printf("%s\n", buf);
+        //char buf[M*N*10] = {0};
+		for(size_t i = 0; i < M; i++){
+			for(size_t j = 0; j < N; j++){
+				printf("%02f, ", (*this)(i, j)); 
+			}
+			printf("\n"); 
+		}
+        //::printf("%s\n", buf);
     }
 
 	// alias
@@ -492,7 +504,19 @@ public:
         }
         return min_val;
     }
-
+	
+	Matrix<Type, M, N> limited(const Matrix<Type, M, N> &_min, const Matrix<Type, M, N> &_max){
+		Matrix<Type, M, N> res; 
+		for (size_t i=0; i<M; i++) {
+            for (size_t j=0; j<N; j++) {
+				float r = (*this)(i, j); 
+				if(r < _min(i, j)) r = _min(i, j); 
+				if(r > _max(i, j)) r = _max(i, j); 
+				res(i, j) = r; 
+            }
+        }
+		return res; 
+	}
 };
 
 template<typename Type, size_t M, size_t N>

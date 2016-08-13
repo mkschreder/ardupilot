@@ -93,6 +93,10 @@ public:
         q(3) = d;
     }
 
+	Quaternion(const Vector<Type, 3> &axis, Type angle){
+		from_axis_angle(axis, angle); 
+	}
+
     Quaternion operator*(const Quaternion &q) const
     {
         const Quaternion &p = *this;
@@ -200,20 +204,6 @@ public:
             vec = vec * wrap_pi((Type)2.0 * atan2f(axis_magnitude,q(0)));
         }
         return vec;
-    }
-
-	Vector<Type, 3> operator* (const Vector<Type, 3>& v) const
-    {
-        const Quaternion &q = *this;
-		// nVidia SDK implementation
-		Vector<Type, 3> uv, uuv;
-		Vector<Type, 3> qvec = matrix::Vector3f(q(1), q(2), q(3));
-		uv = qvec.cross(v);
-		uuv = qvec.cross(uv);
-		uv *= (2.0f * q(0));
-		uuv *= 2.0f;
-
-		return v + uv + uuv;
     }
 };
 
