@@ -16,7 +16,7 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY
 option(SUPPORT_STDIOSTREAM
 	"If enabled provides support for << operator (as used with
 	std::cout)" OFF)
-option(TEST "Enable testing" OFF)
+option(TEST "Enable testing" ON)
 option(FORMAT "Enable formatting" OFF)
 
 if(SUPPORT_STDIOSTREAM)

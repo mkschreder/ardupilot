@@ -73,6 +73,10 @@ public:
     inline void normalize() {
         (*this) /= norm();
     }
+	
+	inline Vector normalized(){ 
+		return (*this) / norm(); 
+	}
 
     Vector unit() const {
         return (*this) / norm();

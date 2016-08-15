@@ -73,10 +73,6 @@ public:
         return _data[0];
     }
 
-	inline Matrix<Type, M, N> inversed() const {
-		return SquareMatrix<Type, M>(*this).I(); 
-	}
-
     inline Type operator()(size_t i, size_t j) const
     {
         return _data[i][j];
@@ -550,6 +546,11 @@ bool isEqual(const Matrix<Type, M, N> &x,
         printf("not equal\nx:\n%s\ny:\n%s\n", buf_x, buf_y);
     }
     return x == y;
+}
+
+template<typename Type, size_t M>
+inline Matrix<Type, M, M> inversed(Matrix<Type, M, M> const &m) {
+	return SquareMatrix<Type, M>(m).I(); 
 }
 
 #if defined(SUPPORT_STDIOSTREAM)
