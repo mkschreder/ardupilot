@@ -103,7 +103,7 @@ void RangeAvoid::update(float dt){
 	}; 
 	matrix::Matrix<float, 3, 3> yaw_mat((float*)_yaw_mat); 
 	//matrix::Matrix<float, 3, 3> yaw_mat_inv = matrix::SquareMatrix<float, 3>(yaw_mat).inversed(); 
-	matrix::Matrix<float, 3, 3> yaw_mat_inv = yaw_mat.inversed(); 
+	matrix::Matrix<float, 3, 3> yaw_mat_inv = matrix::inversed(yaw_mat); 
 
 	matrix::Vector3<float> pos_ef(p.x, p.y, 0.0f);  // reset z
 
