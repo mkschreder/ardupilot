@@ -74,7 +74,7 @@ public:
         (*this) /= norm();
     }
 	
-	inline Vector normalized(){ 
+	inline Vector normalized() const { 
 		return (*this) / norm(); 
 	}
 

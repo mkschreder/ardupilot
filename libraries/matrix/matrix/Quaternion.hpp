@@ -149,7 +149,8 @@ public:
     }
 
 	void applyRates(const Matrix31 &w, float dt){
-		*this = *this + derivative(w) * dt; 
+		*this = *this + derivative(w) * dt;
+		normalize(*this); 
 	}
 
     void invert() {
@@ -262,6 +263,11 @@ Quaternion<Type> slerp(const Quaternion<Type> &_q1, const Quaternion<Type> &q2, 
 template<typename Type>
 Quaternion<Type> operator*(const Type s, const Quaternion<Type> &q){
 	return q.operator*(s); 
+}
+
+template<typename Type>
+Quaternion<Type> normalize(const Quaternion<Type> &o){
+	return o.normalized(); 
 }
 
 } // namespace matrix
