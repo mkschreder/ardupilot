@@ -43,7 +43,7 @@ public:
 		matrix::Matrix<float, M, M> innovation_cov = H * P * H.transposed() + R; 
 
 		// update
-		matrix::Matrix<float, N, M> K = P * H.transposed() * innovation_cov.inversed(); 
+		matrix::Matrix<float, N, M> K = P * H.transposed() * matrix::inversed(innovation_cov); 
 		xk = xk + K * innovation; 
 		P = P - K * H * P; 
 	}
