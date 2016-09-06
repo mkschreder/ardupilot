@@ -335,6 +335,8 @@ void AP_AHRS_NavEKF::reset_attitude(const float &_roll, const float &_pitch, con
     }
 }
 
+#include <stdio.h>
+
 // dead-reckoning support
 bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
 {

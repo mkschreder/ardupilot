@@ -54,6 +54,7 @@ private:
 	}; 
 	// tilt sim servo packets
     struct server_packet {
+		unsigned long long time; 
 		uint8_t mode; 
 		uint8_t frame; 
 		int16_t servo[8]; 

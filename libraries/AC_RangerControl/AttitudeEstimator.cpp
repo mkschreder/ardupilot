@@ -16,118 +16,237 @@
 */
 
 #include "AttitudeEstimator.h"
+#include <kalman/include/KalmanFilter.hpp>
+#include <matrix/matrix/Quaternion.hpp>
+using namespace Eigen; 
+using namespace filter; 
 
-static const matrix::Matrix<float, 3, 3> I = matrix::Matrix<float, 3, 3>::Identity(); 
+#define FUSE_GYRO 	(1 << 0)
+#define FUSE_ACC	(1 << 1)
 
-static matrix::Matrix<float, 3, 3> _crossSkew(const matrix::Vector3f &w){
-	matrix::Matrix<float, 3, 3> W;
+class AttitudeEstimator::Data : public IUKFModel<10, 6> {
+	/************************
+		Filter state
+		-------------
+		0-2: 	w
+		3-5: 	wb
+		6-9: 	q	
+		-------------
+	*************************/	
+	UnscentedKalmanFilter<10, 6, 1> _k; 
+	Matrix<float, 3, 1> _gyro_in; 
+	Matrix<float, 3, 1> _acc_in; 
+	unsigned int _flags; 
+public: 
+	Data();
+	virtual ~Data(){}; 
+	void input_measured_gyro_rates(float wx, float wy, float wz); 
+	void input_measured_acceleration(float ax, float ay, float az); 
+	void get_estimated_quaternion(float (&q)[4]); 
+	void get_estimated_omega(float (&w)[3]); 
+	void update(float dt); 
+		
+	virtual Matrix<float, 10, 1> F(const Matrix<float, 10, 1> &i) override; 
+	virtual Matrix<float, 6, 1> H(const Matrix<float, 10, 1> &i) override; 
 
-	W(0, 0) = 0;
-	W(0, 1) = -w(2);
-	W(0, 2) = w(1);
+private:
+	void _updateQ(); 
 
-	W(1, 0) = w(2);
-	W(1, 1) = 0;
-	W(1, 2) = -w(0);
+	Matrix<float, 3, 1> _state_angular_rate(const Matrix<float, 10, 1> &s){
+		Matrix<float, 3, 1> M; 
+		M << s(0), s(1), s(2); 
+		return M; 
+	}
 
-	W(2, 0) = -w(1);
-	W(2, 1) = w(0);
-	W(2, 2) = 0;
+	Matrix<float, 3, 1> _state_gyro_bias(const Matrix<float, 10, 1> &s){
+		Matrix<float, 3, 1> M; 
+		M << s(3), s(4), s(5); 
+		return M; 
+	}
 
-	return W;
+	Quaternion<float> _state_quaternion(const Matrix<float, 10, 1> &s){
+		return Quaternion<float>(s(6), s(7), s(8), s(9)); 
+	}
+}; 
+
+AttitudeEstimator::Data::Data() : _k(this){
+	_flags = 0; 
+	_gyro_in.setZero(); 
+	_acc_in.setZero(); 
+
+	// set initial state
+	_k.set_xk(Matrix<float, 10, 1>((const float[]){
+		0.0, 0.0, 0.0, 		//w
+		0.0, 0.0, 0.0, 		//wb
+		1.0, 0.0, 0.0, 0.0	//q
+	})); 
+
+	// setup initial belief
+	Matrix<float, 10, 10> P; 
+	Matrix<float, 10, 10> Q; 
+	Matrix<float, 6, 6> R; 
+	P << 
+		0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1; 
+	R << 
+		0.0001, 0.0, 0.0, 0.0, 0.0, 0.0,
+		0.0, 0.0001, 0.0, 0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0001, 0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+		0.0, 0.0, 0.0, 0.0, 0.0, 1.0; 
+
+	// setup initial covariance 
+	_k.set_P(P); 
+
+	// setup measurement covariance 
+	_k.set_R(R); 
 }
 
-static matrix::Quaternion<float> _quatFromAccel(const matrix::Vector3f &acc){
-	// attitude estimation based on application note AN3461
-	// more information: http://stackoverflow.com/questions/3755059/3d-accelerometer-calculate-the-orientation
-	float miu = 0.001f; 
-	float sign = (acc(2) > 0.0f)?1.0f:-1.0f; 
-	float roll = atan2(acc(1), sign * sqrt(acc(2) * acc(2) + miu * acc(0) + acc(0)));
-	float pitch = atan2(-acc(0), sqrt(acc(1) * acc(1) + acc(2) * acc(2)));
-	return matrix::Quaternion<float>(matrix::Vector3f(0, 1, 0), roll) * 
-		matrix::Quaternion<float>(matrix::Vector3f(1, 0, 0), pitch);   
+void AttitudeEstimator::Data::input_measured_gyro_rates(float wx, float wy, float wz){
+	_gyro_in(0) = wx; 
+	_gyro_in(1) = wy; 
+	_gyro_in(2) = wz; 
+	_flags |= FUSE_GYRO; 
 }
+
+void AttitudeEstimator::Data::input_measured_acceleration(float ax, float ay, float az){
+	_acc_in(0) = ax; 
+	_acc_in(1) = ay; 
+	_acc_in(2) = az; 
+	_flags |= FUSE_ACC; 
+}
+
+void AttitudeEstimator::Data::get_estimated_quaternion(float (&q)[4]){
+	Matrix<float, 10, 1> x = _k.get_prediction(); 
+	Quaternion<float> _q = _state_quaternion(x);  
+	printf("STATE Q: %f %f %f %f\n", _q.w(), _q.x(), _q.y(), _q.z()); 
+	_q.normalize(); 
+	q[0] = _q.w(); 
+	q[1] = _q.x(); 
+	q[2] = _q.y(); 
+	q[3] = _q.z(); 
+}
+
+void AttitudeEstimator::Data::get_estimated_omega(float (&w)[3]){
+	Matrix<float, 10, 1> x = _k.get_prediction(); 
+	Matrix<float, 3, 1> o = _state_angular_rate(x); 
+	w[0] = o(0); 
+	w[1] = o(1); 
+	w[2] = o(2); 
+}
+
+void AttitudeEstimator::Data::_updateQ(){
+	Matrix<float, 10, 10> Q; 
+	Matrix<float, 3, 3> qr; 
+	Matrix<float, 10, 1> x = _k.get_prediction(); 
+	Quaternion<float> q = _state_quaternion(x); 
+	qr << 
+		q.w(), -q.z(), q.y(), 
+		q.z(), q.w(), -q.x(), 
+		-q.y(), q.x(), q.w(); 
+	Matrix<float, 3, 1> w; 
+	w << 
+		0.1, 0.1, 0.1; 
+	qr = 1.0f/4.0f * qr * w.asDiagonal() * qr.transpose(); 
+	Q << 
+		0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01;  
+	
+	_k.set_Q(Q); 
+}
+
+void AttitudeEstimator::Data::update(float dt){
+	_updateQ(); 
+
+	_k.predict(Matrix<float, 1, 1>()); 
+
+	// TODO: separate gyro and acc fusing, now they are done in one step
+	if(_flags & (FUSE_GYRO | FUSE_ACC)){
+		printf("fuse gyro: %f %f %f, acc: %f %f %f\n", 
+			_gyro_in(0), _gyro_in(1), _gyro_in(2), 
+			_acc_in(0), _acc_in(1), _acc_in(2)); 
+		Matrix<float, 6, 1> zk; 
+		zk(0) = _gyro_in(0); 
+		zk(1) = _gyro_in(1); 
+		zk(2) = _gyro_in(2); 
+		zk(3) = _acc_in(0); 
+		zk(4) = _acc_in(1); 
+		zk(5) = _acc_in(2); 
+
+		_k.update(zk); 
+
+		_flags = 0; 
+	}
+}
+
+Matrix<float, 10, 1> AttitudeEstimator::Data::F(const Matrix<float, 10, 1> &i) {
+	Matrix<float, 10, 1> data; 
+	Matrix<float, 3, 1> b = _state_gyro_bias(i); 
+	Matrix<float, 3, 1> w = _state_angular_rate(i) - b; 
+	matrix::Quaternion<float> qq(i(6), i(7), i(8), i(9)); 
+	qq.applyRates(matrix::Vector3f(w(0), w(1), w(2)), 1.0f/400.0f); 
+	data <<
+		i(0), i(1), i(2), 
+		i(3), i(4), i(5), 
+		qq(0), qq(1), qq(2), qq(3); 
+	return data; 
+}
+
+Matrix<float, 6, 1> AttitudeEstimator::Data::H(const Matrix<float, 10, 1> &i) {
+	Matrix <float, 6, 1> data; 
+	Matrix<float, 3, 1> _w = _state_angular_rate(i);  
+	Matrix<float, 3, 1> _wb = _state_gyro_bias(i);  
+	Matrix<float, 3, 1> gyr = _w + _wb; 
+	data << 
+		gyr(0), gyr(1), gyr(2), 
+		0, 0, 0; 	
+	return data; 
+}
+
+//** Public interface **/
 
 AttitudeEstimator::AttitudeEstimator(){
-	// start with a large uncertainty
-	P.setIdentity(); 
-	P = P * (M_PI*M_PI); 
-
-	aCov.setIdentity(); 
-	wCov.setIdentity(); 
-	_is_stable = true; 
+	_data = new Data(); 
 }
 
-static matrix::Quaternion<float> _applyGyroRates(const matrix::Quaternion<float> &q, const matrix::Vector3f &gyro, float dt){
-	matrix::Quaternion<float> w(0, gyro(0), gyro(1), gyro(2)); 
-	// euler quaternion integration
-	matrix::Quaternion<float> r = (q + (q * w * 0.5f) * dt); 
-	r.normalize(); 
-	return r; 
+AttitudeEstimator::~AttitudeEstimator(){
+	delete _data; 
 }
 
-void AttitudeEstimator::input_measured_gyro_rates(const matrix::Vector3f &gyro){
-	if(isnan(gyro(0)) || isnan(gyro(1)) || isnan(gyro(2))) return;  
-	// TODO: estimate or update bias
-
-	_w = gyro - _gyro_bias; 
+void AttitudeEstimator::input_measured_gyro_rates(float wx, float wy, float wz){
+	_data->input_measured_gyro_rates(wx, wy, wz); 
 }
 
-void AttitudeEstimator::input_measured_acceleration(const matrix::Vector3f &accel){
-	if(isnan(accel(0)) || isnan(accel(1)) || isnan(accel(2))) return;  
-	_a = accel; 
+void AttitudeEstimator::input_measured_acceleration(float ax, float ay, float az){
+	_data->input_measured_acceleration(ax, ay, az); 
 }
 
-const matrix::Quaternion<float> &AttitudeEstimator::get_estimated_orientation(){
-	return _q; 
+void AttitudeEstimator::get_estimated_quaternion(float (&q)[4]){
+	_data->get_estimated_quaternion(q); 
+}
+
+void AttitudeEstimator::get_estimated_omega(float (&w)[3]){
+	_data->get_estimated_omega(w); 
 }
 
 void AttitudeEstimator::update(float dt){
-	// -- predict
-	// calculate error state jacobian (state transition matrix)
-	F = I - _crossSkew(_w * dt); 
-
-	// add gyro rates to quaternion
-	_q = _applyGyroRates(_q, _w, dt); 
-
-	// noise jacobian 
-	matrix::Matrix<float, 3, 3> G = -I * dt; 
-	matrix::Matrix<float, 3, 3> Q = G * wCov * G.transposed(); 
-
-	// update system covariance
-	P = F * P * F.transposed() + Q; 
-
-	// -- observe 
-	// predict acceleration vector based on current rotation prediction
-	matrix::Vector3f aPred = _q * matrix::Vector3f(0, 0, 9.82);  
-
-	// calculate jacobian
-	matrix::Matrix<float, 3, 3> H = _crossSkew(aPred); 
-
-	// calculate innovation
-	matrix::Vector3f aErr = _a - aPred; 
-	matrix::Matrix<float, 3, 3> innovation_cov = H * P * H.transposed() + aCov; 
-
-	// prevent disaster 
-	/* no determinant function in lib yet
-	if(innovation_cov.determinant() < 1e-5f){
-		_is_stable = false; 
-		return; 
-	} else {
-		_is_stable = true; 
-	}
-	*/
-
-	// -- update
-	// calculate kalman gain
-	matrix::Matrix<float, 3, 3> K = P * H.transposed() * innovation_cov.inversed(); 
-
-	// use approximation to update orientation quaternion 
-	matrix::Vector3f dw = K * aErr; 
-	_q = _q * matrix::Quaternion<float>(1, dw(0) * 0.5f, dw(1) * 0.5f, dw(2) * 0.5f); 
-	_q.normalize(); 
-
-	// update system covariance
-	P = P - K * H * P; 
+	_data->update(dt); 
 }
 

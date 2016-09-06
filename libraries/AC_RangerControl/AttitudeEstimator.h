@@ -17,34 +17,36 @@
 
 #pragma once
 
-#include <matrix/matrix/Vector.hpp>
-#include <matrix/matrix/Matrix.hpp>
-#include <matrix/matrix/Quaternion.hpp>
+/******************
+State: 
+	o w = current angular velocity 
+	x q = estimated orientation
+	x a = estimated acceleration
+	x v = estimated velocity 
+	x p = estimated position
+Measurement: 
+	w = angular velocity in rad/s
+	a = acceleration in m/s/s (aL + g)
+H function: 
+	w = wState
+	a = inv(q) * aState
+F function: 
+	w = w 
+	q = q + 1/2 q x w
+	a = dq * 
+********************/
 
 class AttitudeEstimator {
 public: 
 	AttitudeEstimator(); 
-	void input_measured_gyro_rates(const matrix::Vector3f &gyro); 
-	void input_measured_acceleration(const matrix::Vector3f &accel); 
-	const matrix::Quaternion<float> &get_estimated_orientation(); 
+	~AttitudeEstimator(); 
+
+	void input_measured_gyro_rates(float wx, float wy, float wz); 
+	void input_measured_acceleration(float ax, float ay, float az); 
+	void get_estimated_quaternion(float (&q)[4]); 
+	void get_estimated_omega(float (&w)[3]); 
 	void update(float dt); 
-private:
-	// estimated bias
-	matrix::Vector3f _gyro_bias; 
-	// last gyro readings 
-	matrix::Vector3f _w; 
-	// last accelerometer readings
-	matrix::Vector3f _a; 
-	// estimated orientation 
-	matrix::Quaternion<float> _q; 
-	// error state jacobian
-	matrix::Matrix<float, 3, 3> F; 
-	// system covariance matrix
-	matrix::Matrix<float, 3, 3> P; 
-	// accelerometer measurement covariance
-	matrix::Matrix<float, 3, 3> aCov; 
-	// gyro measurement covariance
-	matrix::Matrix<float, 3, 3> wCov; 
-	// system stable 
-	bool _is_stable; 
+private: 
+	class Data; 
+	Data *_data; 
 }; 

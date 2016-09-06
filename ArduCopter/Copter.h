@@ -96,9 +96,8 @@
 #include <AC_Control/AC_PositionControl.h>
 #include <AC_Control/AC_MatrixPID.h>
 #include <AC_RangerControl/AC_RangerControl.h>
-#include <AC_RangerControl/ObstacleSensor.h>
-
-#include <AC_RangerControl/RangeAvoid.h>
+#include <AC_RangerControl/AttitudeEstimator.h>
+#include <AC_RangerControl/ApproachSensor.h>
 
 // Configuration
 #include "defines.h"
@@ -585,15 +584,17 @@ private:
     AP_Param param_loader;
 
 	AP_RangeScanner_6DOF_SITL rangefinders; 
-	RangerNav ranger_nav; 
-	RangeAvoid range_avoid; 
+	//RangerNav ranger_nav; 
+	//RangeAvoid range_avoid; 
 	
 	AC_RateControl _rate_control; 
 	AC_AngleControl _angle_control; 
 	AC_VelocityControl _velocity_control; 
 	AC_RangerControl _ranger_control; 
-	ObstacleSensor	_obstacle_sensor; 
-	
+	ApproachSensor _approach; 
+	//ObstacleSensor	_obstacle_sensor; 
+	AttitudeEstimator _att; 
+
 	AC_MatrixPID _pid; 
 
 	#if FRAME_CONFIG == HELI_FRAME

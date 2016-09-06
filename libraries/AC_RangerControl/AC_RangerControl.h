@@ -33,8 +33,6 @@
 
 #include <AP_RangeScanner/AP_RangeScanner_6DOF.h>
 
-#include "ObstacleSensor.h"
-
 class AC_RangerControl : public AC_Controller {
 public: 
 	AC_RangerControl( ); 

@@ -1,10 +1,12 @@
 #include "Copter.h"
+#include <matrix/matrix/Euler.hpp>
+#include <kalman/include/ConstantVelocityPositionFilter.hpp>
 
 // same controller as the stabi
 bool Copter::control_ranger_init(bool ignore_checks){
 	hal.console->printf("Ranger mode init.\n"); 
 	stabilize_init(ignore_checks); 
-	range_avoid.reset(); 	
+	//range_avoid.reset(); 	
 
 #if FRAME_CONFIG == HELI_FRAME
     // do not allow helis to enter Alt Hold if the Rotor Runup is not complete
@@ -65,13 +67,13 @@ void Copter::control_ranger_run()
 		matrix::Vector3f(0.083, 0.083, 0.120) 
 	); 
 	_pid.set_angle_tuning(
-		matrix::Vector3f(2.000, 2.000, 1.000), 
+		matrix::Vector3f(4.000, 4.000, 1.000), 
 		matrix::Vector3f(0.100, 0.100, 0.000), 
-		matrix::Vector3f(0.331, 0.331, 0.010) 
+		matrix::Vector3f(0.031, 0.031, 0.010) 
 	); 
 	_pid.set_angular_velocity_tuning(
 		matrix::Vector3f(0.600, 0.600, 1.000), 
-		matrix::Vector3f(0.865, 0.865, 0.000), 
+		matrix::Vector3f(0.086, 0.086, 0.000), 
 		//matrix::Vector3f(0.103, 0.103, 0.010)
 		matrix::Vector3f(0.400, 0.103, 0.010)
 	); 
@@ -103,26 +105,42 @@ void Copter::control_ranger_run()
 	vel = qyaw_inv * vel; 
 
 	Vector3f gyro = ins.get_gyro(); 
+	Vector3f acc = ins.get_accel(); 
+	
+	_att.input_measured_gyro_rates(gyro.x, gyro.y, gyro.z); 
+	_att.input_measured_acceleration(acc.x, acc.y, acc.z); 
+	_att.update(G_Dt); 
+
+	float qdata[4], w[3]; 
+	_att.get_estimated_quaternion(qdata); 
+	_att.get_estimated_omega(w); 
+	matrix::Quaternion<float> q(qdata);  
+
+	matrix::Euler<float> euler = matrix::eulerAngles(q); 
+	printf("Att: %f %f %f, w: %f %f %f, ahrs: %f %f %f\n", 
+		degrees(euler.roll()), degrees(euler.pitch()), degrees(euler.yaw()), 
+		w[0], w[1], w[2],
+		degrees(ahrs.roll), degrees(ahrs.pitch), degrees(ahrs.yaw)); 
 
 	// convert throttle into up/down rate with max speed of 1m/s
 	float thr = throttle - 0.5; 
 	if(thr > -0.1f && thr < 0.1f) thr = 0; 
 	float descend_velocity = constrain_float(thr * 2.0f, -1.0, 1.0); 
 
-	Vector3f sp; 
-	_obstacle_sensor.update(G_Dt); 
-	_obstacle_sensor.get_safest_position_offset(sp); 
-
-	::printf("safest pos: %f %f %f\n", sp.x, sp.y, sp.z); 
+	//Vector3f sp; 
+	//_obstacle_sensor.update(G_Dt); 
+	//_obstacle_sensor.get_safest_position_offset(sp); 
 
 	// input measured parameters
 	_pid.input_measured_position(matrix::Vector3f(pos.x, pos.y, pos.z)); 
 	_pid.input_measured_velocity(matrix::Vector3f(vel.x, vel.y, vel.z)); 
 	_pid.input_measured_angles(matrix::Vector3f(ahrs.roll, ahrs.pitch, ahrs.yaw)); 
+	//_pid.input_measured_angles(matrix::Vector3f(euler.roll(), euler.pitch(), euler.yaw())); 
 	_pid.input_measured_angular_velocity(matrix::Vector3f(gyro.x, gyro.y, gyro.z)); 
 
 	Vector3f tp = (qyaw * Vector3f(-target_pitch, target_roll, 0) * 10.0f + Vector3f(0, 0, -descend_velocity) * 4.0f); 
 
+	/*
 	if(!is_zero(sp.x) || !is_zero(sp.y) || !is_zero(target_pitch) || !is_zero(target_roll)){
 		_target_pos = pos; 
 		if(!is_zero(sp.x) || !is_zero(sp.y))
@@ -130,8 +148,10 @@ void Copter::control_ranger_run()
 		if(!is_zero(target_pitch) || !is_zero(target_roll))
 			_target_pos += Vector3f(tp.x, tp.y, 0); 
 	}
-
-	::printf("target pos: %f %f %f\n", _target_pos.x, _target_pos.y, _target_pos.z); 
+*/
+	if(!is_zero(target_pitch) || !is_zero(target_roll)){
+		_target_pos = pos + Vector3f(tp.x, tp.y, 0); 
+	}
 
 	_pid.input_target_position(
 		matrix::Vector3f(_target_pos.x, _target_pos.y, _target_pos.z) 
@@ -141,18 +161,44 @@ void Copter::control_ranger_run()
 	Vector3f dvel = qyaw_inv * Vector3f(v(0), v(1), 0); 
 
 	_pid.input_target_velocity(matrix::Vector3f(dvel.x, dvel.y, -descend_velocity)); 
-/*
-	_pid.input_target_velocity(matrix::Vector3f(
+	/*_pid.input_target_velocity(matrix::Vector3f(
 		-(target_pitch * 20.0f - sp.x), 
 		(target_roll * 20.0f + sp.y), 
 		-descend_velocity)); 
-*/
+	*/
+	_approach.update(); 
+	Vector3f u = _approach.get_desired_angles(); 
+	Vector3f c = _approach.get_safest_point(); 
+	target_roll += c.y * 0.2f; 		
+	target_pitch += -c.x * 0.2f; 		
+	//target_roll += c.y * 0.2 + u.x; 
+	//target_pitch += -c.x * 0.2 + u.y; 
+	//_pid.input_measured_velocity(matrix::Vector3f(u.y * 7.0f, -u.x * 7.0f, vel.z)); 
+	_pid.input_target_velocity(matrix::Vector3f(
+		-(target_pitch * 5.0f), 
+		(target_roll * 5.0f), 
+		-descend_velocity)); 
+
 	matrix::Vector3f ta = _pid.get_desired_acceleration(); 
 	_pid.input_target_angles(matrix::Vector3f(
 		constrain_float(ta(1), radians(-45.0f), radians(45.0f)), 
 		constrain_float(-ta(0), radians(-45.0f), radians(45.0f)), 
-		ahrs.yaw)); 
-	//_pid.input_target_angles(matrix::Vector3f(target_roll * radians(45.0f), target_pitch * radians(45.0f), ahrs.yaw)); 
+		0.0f));
+
+	static FILE *logfile = 0; 
+	if(!logfile) logfile = fopen("/tmp/log.log", "w"); 
+	static long long _last_range_reading = 0; 
+	long long last_reading = rangefinders.last_update_millis(); 
+	if(_last_range_reading != last_reading){	
+		float front, back, right, left, bottom, top; 
+		rangefinders.get_readings_m(&front, &back, &right, &left, &bottom, &top); 
+		fprintf(logfile, "%f, %f, %f, %f, %f, %f, %f, %f\n", front, back, right, left, u.x, u.y, c.x, c.y); 
+		//fprintf(logfile, "%f, %f, %f, %f, %f, %f, %f, %f\n", front, back, right, left, bottom, top, p(0), p(1)); 
+		_last_range_reading = last_reading; 
+	}
+
+	//_pid.input_target_angles(matrix::Vector3f(target_roll * radians(45.0f), target_pitch * radians(45.0f), 0.0f)); 
+	//_pid.input_target_angles(matrix::Vector3f(ta(1), -ta(0), 0.0f)); 
 	matrix::Vector3f ar = _pid.get_desired_angular_velocity(); 
 	_pid.input_target_angular_velocity(matrix::Vector3f(ar(0), ar(1), target_yaw * 5.0f)); 
 	_pid.update(G_Dt); 
@@ -163,10 +209,14 @@ void Copter::control_ranger_run()
 	motors.set_yaw(rates(2)); 
 
 	// convert throttle to 0-1.0 range 
-	::printf("throttle: %f\n", -constrain_float(ta(2), -1.0f, 1.0f) * 0.5f + 0.5f); 
 	motors.set_throttle(-constrain_float(ta(2), -1.0f, 1.0f) * 0.5f + 0.5f); 
 	//motors.set_throttle(throttle); 
 
+	/*fprintf(logfile, "%f, %f, %f, %f, %f, %f\n", 
+		degrees(euler.roll()), degrees(euler.pitch()), degrees(euler.yaw()), 
+		degrees(ahrs.roll), degrees(ahrs.pitch), degrees(ahrs.yaw)); 	
+		*/
+	fflush(logfile); 
 #if 0
     // apply SIMPLE mode transform to pilot inputs
     update_simple_mode();

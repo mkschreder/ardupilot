@@ -25,3 +25,6 @@
 [submodule "libraries/matrix"]
 	path = libraries/matrix
 	url = https://github.com/mkschreder/px4-matrix.git
+[submodule "libraries/kalman"]
+	path = libraries/kalman
+	url = https://github.com/mkschreder/libkalman.git
