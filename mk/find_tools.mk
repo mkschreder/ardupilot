@@ -64,7 +64,7 @@ ZYNQ_GDB     :=  arm-xilinx-linux-gnueabi-gdb
 ZYNQ_OBJCOPY :=  arm-xilinx-linux-gnueabi-objcopy
 
 # enable ccache if installed
-CCACHE :=  $(call FIND_TOOL,ccache)
+CCACHE := $(call FIND_TOOL,ccache)
 export CCACHE
 
 CXX = $(CCACHE) $($(TOOLCHAIN)_CXX)

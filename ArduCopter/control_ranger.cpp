@@ -169,14 +169,14 @@ void Copter::control_ranger_run()
 	_approach.update(); 
 	Vector3f u = _approach.get_desired_angles(); 
 	Vector3f c = _approach.get_safest_point(); 
-	target_roll += c.y * 0.2f; 		
-	target_pitch += -c.x * 0.2f; 		
+	target_roll = target_roll * 3.0f; // + c.y * 1.5; 		
+	target_pitch = target_pitch * 3.0f;// + -c.x * 1.5f; 		
 	//target_roll += c.y * 0.2 + u.x; 
 	//target_pitch += -c.x * 0.2 + u.y; 
-	//_pid.input_measured_velocity(matrix::Vector3f(u.y * 7.0f, -u.x * 7.0f, vel.z)); 
+	_pid.input_measured_velocity(matrix::Vector3f(u.y * 4.0f, -u.x * 4.0f, vel.z)); 
 	_pid.input_target_velocity(matrix::Vector3f(
-		-(target_pitch * 5.0f), 
-		(target_roll * 5.0f), 
+		-(target_pitch), 
+		(target_roll), 
 		-descend_velocity)); 
 
 	matrix::Vector3f ta = _pid.get_desired_acceleration(); 
@@ -185,7 +185,7 @@ void Copter::control_ranger_run()
 		constrain_float(-ta(0), radians(-45.0f), radians(45.0f)), 
 		0.0f));
 
-	static FILE *logfile = 0; 
+	/*static FILE *logfile = 0; 
 	if(!logfile) logfile = fopen("/tmp/log.log", "w"); 
 	static long long _last_range_reading = 0; 
 	long long last_reading = rangefinders.last_update_millis(); 
@@ -195,7 +195,7 @@ void Copter::control_ranger_run()
 		fprintf(logfile, "%f, %f, %f, %f, %f, %f, %f, %f\n", front, back, right, left, u.x, u.y, c.x, c.y); 
 		//fprintf(logfile, "%f, %f, %f, %f, %f, %f, %f, %f\n", front, back, right, left, bottom, top, p(0), p(1)); 
 		_last_range_reading = last_reading; 
-	}
+	}*/
 
 	//_pid.input_target_angles(matrix::Vector3f(target_roll * radians(45.0f), target_pitch * radians(45.0f), 0.0f)); 
 	//_pid.input_target_angles(matrix::Vector3f(ta(1), -ta(0), 0.0f)); 
@@ -216,7 +216,7 @@ void Copter::control_ranger_run()
 		degrees(euler.roll()), degrees(euler.pitch()), degrees(euler.yaw()), 
 		degrees(ahrs.roll), degrees(ahrs.pitch), degrees(ahrs.yaw)); 	
 		*/
-	fflush(logfile); 
+	//fflush(logfile); 
 #if 0
     // apply SIMPLE mode transform to pilot inputs
     update_simple_mode();

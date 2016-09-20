@@ -28,3 +28,6 @@
 [submodule "libraries/kalman"]
 	path = libraries/kalman
 	url = https://github.com/mkschreder/libkalman.git
+[submodule "libraries/eigen3"]
+	path = libraries/eigen3
+	url = https://github.com/RLovelett/eigen
